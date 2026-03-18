@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表 - 存储 SecondMe 认证信息和基本资料
+model User {
+  id                String   @id @default(cuid())
+  secondmeUserId    String   @unique @map("secondme_user_id")
+  accessToken       String   @map("access_token")
+  refreshToken      String   @map("refresh_token")
+  tokenExpiresAt    DateTime @map("token_expires_at")
+  
+  // 用户资料
+  nickname          String?
+  avatar            String?
+  bio               String?
+  
+  // 匹配偏好设置（后续迭代）
+  // matchPreferences  String?  @map("match_preferences") // JSON 格式存储
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // 关系
+  sentMatches       Match[]  @relation("SentMatches")
+  receivedMatches   Match[]  @relation("ReceivedMatches")
+  chatMessages      ChatMessage[]
+  notes             Note[]
+  agentConversations1 AgentConversation[] @relation("UserAgentConversations1")
+  agentConversations2 AgentConversation[] @relation("UserAgentConversations2")
+  
+  @@map("users")
+}
+
+// 匹配记录表
+model Match {
+  id                    String    @id @default(cuid())
+  userId                String    @map("user_id")
+  matchedUserId         String    @map("matched_user_id")
+  matchScore            Float     @map("match_score") // 匹配分数 0-100
+  matchReason           String?   @map("match_reason") // 匹配原因/摘要
+  agentConversationId   String?   @map("agent_conversation_id")
+  
+  status                MatchStatus @default(PENDING) // PENDING, ACCEPTED, REJECTED
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  
+  // 关系
+  user                  User      @relation("SentMatches", fields: [userId], references: [id])
+  matchedUser           User      @relation("ReceivedMatches", fields: [matchedUserId], references: [id])
+  agentConversation     AgentConversation? @relation(fields: [agentConversationId], references: [id])
+  
+  @@unique([userId, matchedUserId])
+  @@map("matches")
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// Agent 对话记录表
+model AgentConversation {
+  id          String   @id @default(cuid())
+  user1Id     String   @map("user1_id")
+  user2Id     String   @map("user2_id")
+  
+  // 对话内容（JSON 格式存储消息数组）
+  messages    String   // JSON: [{role: 'agent1'|'agent2', content: string, timestamp: string}]
+  
+  // 评分结果
+  compatibilityScore Float?   @map("compatibility_score") // 契合度分数
+  summary     String?  // 对话摘要/亮点
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // 关系
+  matches     Match[]
+  user1       User     @relation("UserAgentConversations1", fields: [user1Id], references: [id])
+  user2       User     @relation("UserAgentConversations2", fields: [user2Id], references: [id])
+  
+  @@map("agent_conversations")
+}
+
+// 用户私聊消息表
+model ChatMessage {
+  id          String   @id @default(cuid())
+  senderId    String   @map("sender_id")
+  receiverId  String   @map("receiver_id")
+  content     String
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  // 关系
+  sender      User     @relation(fields: [senderId], references: [id])
+  
+  @@map("chat_messages")
+}
+
+// 笔记表 - 用户记录对匹配对象的印象
+model Note {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  targetUserId String  @map("target_user_id") // 记录关于谁
+  content     String   // 笔记内容
+  
+  // SecondMe Note ID（如果已同步到 SecondMe）
+  secondmeNoteId String? @map("secondme_note_id")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // 关系
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@map("notes")
+}
