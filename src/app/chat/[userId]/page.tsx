@@ -154,7 +154,13 @@ export default function ChatDetailPage() {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => {
+              // 阻止中文输入法合成过程中的 Enter 键触发发送
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder="输入消息..."
             className="flex-1 bg-gray-100 rounded-full py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
           />
