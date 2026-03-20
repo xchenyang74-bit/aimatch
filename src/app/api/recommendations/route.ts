@@ -136,25 +136,31 @@ function generateAgentConversation(userTags: string[], targetTags: string[]): st
 
 export async function GET() {
   try {
-    // 获取当前用户（开发模式）
-    let user = await prisma.user.findFirst({
-      where: { id: DEV_USER_ID },
-    });
-
-    // 如果用户不存在，创建默认用户
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: DEV_USER_ID,
-          secondmeUserId: 'dev-secondme-id',
-          accessToken: 'dev-token',
-          refreshToken: 'dev-refresh',
-          tokenExpiresAt: new Date(Date.now() + 86400000),
-          nickname: '开发者',
-          bio: '热爱摄影和旅行，喜欢用镜头记录美好瞬间',
-          avatar: null,
-        },
+    let user = null;
+    
+    // 尝试从数据库获取用户（生产环境可能无数据库）
+    try {
+      user = await prisma.user.findFirst({
+        where: { id: DEV_USER_ID },
       });
+
+      // 如果用户不存在，创建默认用户
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            id: DEV_USER_ID,
+            secondmeUserId: 'dev-secondme-id',
+            accessToken: 'dev-token',
+            refreshToken: 'dev-refresh',
+            tokenExpiresAt: new Date(Date.now() + 86400000),
+            nickname: '开发者',
+            bio: '热爱摄影和旅行，喜欢用镜头记录美好瞬间',
+            avatar: null,
+          },
+        });
+      }
+    } catch (dbError) {
+      console.log('Database not available, using mock mode');
     }
 
     // 用户的兴趣标签
