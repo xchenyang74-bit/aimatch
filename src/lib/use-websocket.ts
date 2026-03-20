@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
+
+type SocketType = ReturnType<typeof io>;
 
 interface Message {
   id: string;
@@ -33,7 +35,7 @@ export function useWebSocket({
   onMessagesRead,
   onUserStatus,
 }: UseWebSocketOptions) {
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<SocketType | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
