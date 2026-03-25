@@ -48,7 +48,7 @@ export default function EditProfilePage() {
         }
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err: Error) => {
         console.error('Failed to load profile:', err);
         setLoading(false);
       });

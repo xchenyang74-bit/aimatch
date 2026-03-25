@@ -11,16 +11,18 @@
 
 ---
 
----
-
 ## 📅 时间线
 
 ### 2026-03-22
 - **重要事件**: 会话上下文丢失，重新建立记忆库
 - **状态**: 需要恢复以下信息：
-  1. 博弈圆桌开源项目详情（待补充）
-  2. Aimatch 登录页面具体问题（待补充）
-  3. A2A 模式选择讨论（进行中）
+  1. 博弈圆桌开源项目详情（已补充）
+  2. Aimatch 登录页面问题（已修复）
+  3. A2A 模式选择讨论（已完成）
+
+### 2026-03-25
+- **重要事件**: Railway 部署调试
+- **状态**: 多个构建问题已修复
 
 ---
 
@@ -64,12 +66,19 @@
 - [x] Redis 缓存
 - [ ] **接入真实 SecondMe Agent API** (TODO)
 
-### 4. 聊天功能
+### 4. A2A (Agent-to-Agent) 系统 ✅ 新实现
+- [x] 中继模式架构
+- [x] 两个真实用户 SecondMe 分身对话
+- [x] 契合度分析算法
+- [x] 新用户自动匹配（Top 50）
+- [x] 定时增量匹配
+
+### 5. 聊天功能
 - [x] 聊天列表页面
 - [x] 单聊页面框架
 - [ ] WebSocket 实时消息 (TODO)
 
-### 5. 个人资料
+### 6. 个人资料
 - [x] 资料展示
 - [x] 资料编辑
 - [x] SecondMe 标签同步
@@ -79,7 +88,7 @@
 ## 📝 待解决问题/优化项
 
 ### 高优先级
-- [ ] **登录页面问题** - 待明确具体问题
+- [ ] **登录页面问题** - 已修复 OAuth 回调
 - [ ] **接入真实 Agent API** - 当前为模拟数据
 
 ### 中优先级
@@ -159,6 +168,16 @@
 - N个用户就有 N*(N-1)/2 对组合，计算量随用户数平方增长
 - 需要优化：缓存、增量计算、异步处理
 
+#### 4. 实现方案 ✅ **已确认**
+
+| 配置项 | 选择 | 说明 |
+|--------|------|------|
+| 对话议题 | 自由对话 | 不预设议题，Agent 根据 tags/memory 自主 |
+| 对话轮次 | 3-5 轮 | 固定轮次，6-10 条消息 |
+| 新用户匹配 | Top 50 | 按共同标签数量排序 |
+| 定时任务 | 每天 12:00 | 增量匹配未匹配组合 |
+| 触发时机 | 立即执行 | 用户注册后立即触发 |
+
 ---
 
 ## 📚 参考项目
@@ -224,20 +243,223 @@
 
 ---
 
-## 💡 想法记录区
+## 💡 问题备忘录 / 知识点
 
-### 待讨论的想法
-- [ ] 中继模式 vs 直连模式的最终选择
-- [ ] 登录页面具体需要哪些修改？
-- [ ] 博弈圆桌项目的参考价值
+### 问题 1: SecondMe OAuth 登录失败 - `missing_user_id`
+
+**现象**: 登录回调显示 "missing_user_id" 错误
+
+**原因**: 
+- SecondMe Token 响应中**没有直接返回用户ID**
+- 需要通过 `/api/secondme/user/info` API 获取用户信息
+
+**解决方案**:
+```typescript
+// 1. 先从 Token 响应尝试获取
+const secondme_id = tokenResponseData.secondme_id 
+  || tokenResponseData.user_id 
+  || tokenResponseData.userId 
+  || tokenResponseData.id;
+
+// 2. 如果 Token 中没有，从用户信息 API 获取
+const userResponse = await fetch(`${API_BASE}/api/secondme/user/info`, {
+  headers: { 'Authorization': `Bearer ${access_token}` },
+});
+const userData = await userResponse.json();
+const finalId = secondme_id || userData.data.id;
+```
+
+**关键教训**: SecondMe OAuth 流程需要**两步获取用户信息**，Token 响应只包含 access_token，不保证包含 user_id。
+
+---
+
+### 问题 2: Prisma SQLite 数组字段不支持
+
+**现象**: `String[]` 类型在 SQLite 中报错
+
+**原因**: SQLite 不支持数组类型
+
+**解决方案**: 使用 JSON 字符串存储
+```prisma
+// 修改前
+highlights          String[]  // SQLite 不支持
+
+// 修改后  
+highlights          String    // 存储 JSON.stringify([...])
+```
+
+**数据转换**:
+```typescript
+// 存储时：数组 → JSON 字符串
+await prisma.a2AConversation.create({
+  data: {
+    highlights: JSON.stringify(['item1', 'item2']),
+  }
+});
+
+// 读取时：JSON 字符串 → 数组
+const conv = await prisma.a2AConversation.findFirst();
+const highlights = JSON.parse(conv.highlights);
+```
+
+---
+
+### 问题 3: Prisma 必填字段缺失
+
+**现象**: 创建记录时报错 `Missing required field`
+
+**原因**: Prisma schema 中定义为非可选字段（没有 `?`）的字段在创建时必须提供
+
+**解决方案**: 
+```prisma
+// 如果定义为必填
+highlights          String    // 没有 ?，表示必填
+
+// 创建时必须提供值
+data: {
+  highlights: '[]',  // 提供默认值
+}
+```
+
+**关键教训**: 
+- 可选字段: `String?` - 可以不提供
+- 必填字段: `String` - 必须提供值，即使是空字符串或 `[]`
+
+---
+
+### 问题 4: SecondMe OAuth Token 请求格式
+
+**现象**: Token 交换返回 400/401 错误
+
+**原因**: 请求格式错误
+
+**正确格式**:
+```typescript
+// ❌ 错误：使用 JSON
+const response = await fetch(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({...}),  // 错误！
+});
+
+// ✅ 正确：使用 URLSearchParams
+const params = new URLSearchParams({
+  grant_type: 'authorization_code',
+  client_id: CLIENT_ID,
+  client_secret: CLIENT_SECRET,
+  code: code,
+  redirect_uri: REDIRECT_URI,
+});
+
+const response = await fetch(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: params,
+});
+```
+
+**关键教训**: SecondMe OAuth 使用 `application/x-www-form-urlencoded` 格式，不是 JSON。
+
+---
+
+### 问题 5: Railway 构建失败 - Prisma Schema 找不到
+
+**现象**: `Error: Can't find schema.prisma`
+
+**原因**: Dockerfile 中 `prisma/schema.prisma` 在 `npm ci` 之后才复制，但 `postinstall` 钩子需要它
+
+**解决方案**:
+```dockerfile
+# ❌ 错误顺序
+COPY package*.json ./
+RUN npm ci          # postinstall 需要 schema.prisma，但还没复制
+COPY prisma ./prisma/
+
+# ✅ 正确顺序
+COPY package*.json ./
+COPY prisma ./prisma/  # 先复制 prisma
+RUN npm ci             # 现在 postinstall 能找到 schema
+```
+
+---
+
+### 问题 6: GitHub PR 合并流程
+
+**现象**: Railway 部署的还是旧代码，修复没有生效
+
+**原因**: 代码在 PR 分支，还没有合并到 main
+
+**解决方案**:
+```bash
+# 方法 1: GitHub 网站上合并
+# 打开 PR 页面 → 点击 "Merge pull request"
+
+# 方法 2: 命令行合并
+git checkout main
+git merge origin/PR分支名
+git push origin main
+```
+
+**关键教训**: Railway 只部署 main 分支的代码，PR 必须合并后才能生效。
+
+---
+
+### 问题 7: Cookie 设置顺序
+
+**现象**: 登录成功但 cookie 没设置，页面跳转后未登录状态
+
+**原因**: 先创建了 redirect response，后设置 cookie
+
+**解决方案**:
+```typescript
+// ❌ 错误顺序
+const response = NextResponse.redirect('/dashboard');
+response.cookies.set('user_id', userId);  // 可能已经晚了
+
+// ✅ 正确顺序
+const response = NextResponse.redirect('/dashboard');
+response.cookies.set('user_id', userId, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 30 * 24 * 60 * 60,
+});
+return response;
+```
+
+---
+
+### 问题 8: TypeScript 类型不匹配
+
+**现象**: `Type 'string[]' is not assignable to type 'string'`
+
+**原因**: Prisma schema 定义为 `String`，但代码传入数组
+
+**解决方案**:
+```typescript
+// ❌ 错误
+await prisma.table.update({
+  data: {
+    highlights: ['item1', 'item2'],  // 类型错误！
+  }
+});
+
+// ✅ 正确
+await prisma.table.update({
+  data: {
+    highlights: JSON.stringify(['item1', 'item2']),
+  }
+});
+```
 
 ---
 
 ## 🔗 重要链接
 
+- **GitHub 仓库**: https://github.com/xchenyang74-bit/aimatch
 - **SecondMe API 文档**: https://api.mindverse.com/gate/lab
 - **OAuth 授权**: https://go.second.me/oauth/
-- **部署地址**: (待补充)
+- **博弈圆桌参考**: https://github.com/calderbuild/negotiation-arena
 
 ---
 
@@ -265,47 +487,6 @@
 
 ---
 
-*最后更新: 2026-03-22 22:04*
-
-
----
-
-## ✅ A2A 实现方案（2026-03-22 确认）
-
-### 1. 对话议题
-- **自由对话**：不预设议题
-- **Agent 自主**：根据双方 memory、tag 标签等自行展开对话
-- **平台角色**：仅提供"聊天环境"（中继），不干预内容
-
-### 2. 对话轮次
-- **固定轮次**：3-5 轮（6-10 条消息）
-- **每轮**：双方各发言一次
-
-### 3. 计算频率
-- **新用户进入**：立即与存量用户匹配（匹配一定数量）
-- **存量用户**：定时匹配（如每晚）
-
----
-
-## 🤔 待确认问题
-
-1. **新用户匹配数量**：新用户注册时，匹配多少个存量用户？
-   - 全部？
-   - 前 N 个（如前 50 个）？
-   - 按某种筛选条件（如活跃度、共同标签数量）？
-
-2. **定时任务频率**：
-   - 每天一次？
-   - 每周一次？
-   - 还是增量更新（只计算未匹配的组合）？
-
-3. **对话触发时机**：
-   - 立即执行（用户注册后立即开始对话）？
-   - 还是队列异步处理（后台慢慢算）？
-
-
----
-
 ## ✅ A2A 实现方案（2026-03-22 最终确认）
 
 ### 1. 对话议题
@@ -329,199 +510,23 @@
 
 ---
 
-### 匹配算法详细设计
-
-```
-新用户注册 (UserN)
-    ↓
-获取存量用户列表 (User1...UserN-1)
-    ↓
-计算共同标签数量:
-    for each UserI in 存量用户:
-        commonTags = intersection(UserN.tags, UserI.tags)
-        score = count(commonTags)
-    ↓
-按共同标签数降序排序
-    ↓
-取前 50 名
-    ↓
-依次执行 A2A 对话
-```
-
-### 数据库模型
-
-```prisma
-model A2AConversation {
-  id                  String   @id @default(cuid())
-  userAId             String
-  userBId             String
-  status              String   // pending, running, completed, failed
-  
-  // 匹配元数据
-  commonTags          String[] // 共同标签列表
-  commonTagCount      Int      // 共同标签数量
-  
-  // 对话内容
-  messages            Json?    // [{speaker, content, timestamp, round}]
-  
-  // 契合度报告
-  compatibilityScore  Float?   // 0-100
-  conversationQuality Json?    // {engagement, depth, harmony}
-  highlights          String[] // 精彩对话片段
-  analysisPros        String[] // 优势
-  analysisCons        String[] // 潜在问题
-  
-  createdAt           DateTime @default(now())
-  completedAt         DateTime?
-  
-  @@unique([userAId, userBId])
-  @@index([userAId])
-  @@index([userBId])
-  @@index([compatibilityScore])
-  @@index([commonTagCount])
-}
-```
-
-
----
-
-## ✅ A2A 实现完成（2026-03-22）
-
-### 实现内容
-
-#### 1. 数据库模型 (`prisma/schema.prisma`)
-- 新增 `A2AConversation` 表，存储对话记录和契合度报告
-- 字段：messages, compatibilityScore, highlights, analysis 等
-
-#### 2. A2A 对话引擎 (`src/lib/a2a-engine.ts`)
-- **中继模式**：通过服务器中转两个用户的 SecondMe API 调用
-- **自由对话**：不预设议题，Agent 根据 memory、tags 自主交流
-- **固定轮次**：3-5 轮（6-10 条消息）
-- **契合度分析**：自动生成评分、优缺点分析、摘要
-
-#### 3. 匹配引擎 (`src/lib/a2a-matcher.ts`)
-- **新用户匹配**：按共同标签排序，取前 50 个存量用户
-- **定时任务**：每天增量匹配未匹配过的用户组合
-- **异步处理**：立即执行但不阻塞用户流程
-
-#### 4. API 路由
-- `POST /api/a2a/match` - 触发新用户的 A2A 匹配
-- `GET /api/a2a/cron?secret=xxx` - 定时任务（增量匹配）
-- `GET /api/recommendations` - 使用 A2A 结果生成推荐
-
-#### 5. OAuth 回调集成
-- 新用户注册后自动触发 A2A 匹配
-- 异步执行，不阻塞登录流程
-
-### 关键设计决策
-
-| 决策 | 选择 | 说明 |
-|------|------|------|
-| 通信模式 | 中继模式 | 服务器中转，可记录/控制/生成报告 |
-| Agent 身份 | 代理模式 | 不扮演，而是代理对方的真实 AI 分身 |
-| 对话议题 | 自由对话 | 不预设议题，Agent 根据 tags/memory 自主 |
-| 对话轮次 | 固定 3-5 轮 | 平衡对话质量与 API 成本 |
-| 新用户匹配 | Top 50 | 按共同标签数排序 |
-| 定时任务 | 每天 12:00 | 增量匹配未匹配组合 |
-
-### 待优化项
-
-- [ ] **队列系统**：当前是同步执行，大量用户时需要消息队列
-- [ ] **流式输出**：博弈圆桌使用 SSE 流式，Aimatch 目前是批量返回
-- [ ] **错误重试**：SecondMe API 失败时的重试机制
-- [ ] **Token 刷新**：Access Token 过期时自动刷新
-- [ ] **Vercel Cron**：配置定时任务调度
-
-### 环境变量要求
-
-```env
-# 已有
-SECONDME_CLIENT_ID=xxx
-SECONDME_CLIENT_SECRET=xxx
-SECONDME_API_BASE_URL=https://api.mindverse.com/gate/lab
-
-# 新增（可选，用于定时任务验证）
-CRON_SECRET=your-cron-secret
-```
-
-### 测试方式
-
-1. **新用户注册**：OAuth 登录后自动触发匹配
-2. **手动触发**：`POST /api/a2a/match { "userId": "xxx" }`
-3. **定时任务**：`GET /api/a2a/cron?secret=xxx`
-4. **查看推荐**：`GET /api/recommendations`（优先返回 A2A 结果）
-
-
----
-
-## 🔧 登录页面修复（2026-03-22）
-
-### 问题诊断
-1. **Cookie 设置问题**：回调中先创建了 redirect response，然后设置 cookie，导致 cookie 可能未正确设置
-2. **新用户检测问题**：使用 `user.createdAt.getTime() > Date.now() - 60000` 判断新用户不可靠
-3. **缺少认证中间件**：没有统一的登录状态检查
-4. **Dashboard 未检查登录**：API 调用失败时没有跳转到登录页
-
-### 修复内容
-
-#### 1. OAuth 回调 (`/api/auth/callback/route.ts`)
-- ✅ 修复 cookie 设置顺序：先创建 response，再设置 cookie
-- ✅ 修复新用户检测：查询前先检查用户是否存在
-- ✅ 统一错误处理：所有错误情况都清除 state cookie
-- ✅ 使用 `user.id` 而非 `secondme_id` 作为 cookie 值
-
-#### 2. 认证中间件 (`/src/middleware.ts`)
-- ✅ 创建中间件保护需要登录的路由
-- ✅ 未登录用户访问 `/dashboard`、`/chat`、`/profile` 时重定向到登录页
-
-#### 3. Dashboard 页面 (`/app/dashboard/page.tsx`)
-- ✅ 添加 401 检查，未登录时自动跳转
-
-#### 4. API 路由
-- ✅ `/api/recommendations`：添加 `getCurrentUser()` 认证检查
-- ✅ `/api/matches`：添加 `getCurrentUser()` 认证检查
-- ✅ `/lib/auth.ts`：修复 `getCurrentUser()` 查询逻辑
-
-#### 5. 调试工具 (`/api/debug/session`)
-- ✅ 添加调试 API 用于检查登录状态
-
-### 测试步骤
-1. 访问 `/login`
-2. 点击 "使用 SecondMe 登录"
-3. 在 SecondMe 授权页面确认授权
-4. 回调后应该正确设置 cookie 并跳转到 `/dashboard`
-5. 检查 `/api/debug/session` 确认登录状态
-
-### 环境变量检查
-确保 `.env` 中有：
-```env
-SECONDME_CLIENT_ID=xxx
-SECONDME_CLIENT_SECRET=xxx
-SECONDME_REDIRECT_URI=http://localhost:3000/api/auth/callback
-SECONDME_API_BASE_URL=https://api.mindverse.com/gate/lab
-SECONDME_OAUTH_URL=https://go.second.me/oauth/
-SECONDME_TOKEN_ENDPOINT=https://api.mindverse.com/gate/lab/api/oauth/token/code
-```
-
-
----
-
-## 🚀 Railway 部署准备（2026-03-22）
+## 🚀 Railway 部署准备（2026-03-25）
 
 ### 部署文件已创建
 
 | 文件 | 说明 |
 |------|------|
-| `Dockerfile` | Docker 构建配置 |
+| `Dockerfile` | Docker 构建配置（已简化） |
 | `railway.json` | Railway 配置（legacy） |
 | `railway.toml` | Railway 配置（新格式） |
+| `.dockerignore` | Docker 忽略文件 |
 | `.github/workflows/deploy-railway.yml` | GitHub Actions 自动部署 |
 | `RAILWAY_DEPLOY_GUIDE.md` | Railway CLI 部署指南 |
 | `DEPLOY.md` | 完整部署文档 |
 
-### 部署步骤
+### 快速部署步骤
 
-#### 方法一：Railway 网站一键部署（最简单）
+#### 方法 1：Railway 网站一键部署（最简单）
 
 1. 推送代码到 GitHub
 2. 访问 https://railway.app
@@ -531,7 +536,7 @@ SECONDME_TOKEN_ENDPOINT=https://api.mindverse.com/gate/lab/api/oauth/token/code
 6. 生成域名
 7. 更新 SecondMe 回调地址
 
-#### 方法二：Railway CLI
+#### 方法 2：Railway CLI
 
 ```bash
 # 安装 CLI
@@ -560,18 +565,13 @@ railway domain
 ### 必需的环境变量
 
 ```env
-# SecondMe OAuth2
 SECONDME_CLIENT_ID=54f4205d-7a46-4140-a3b3-4227520473d3
 SECONDME_CLIENT_SECRET=cddc1cc84d0d3d1c5fee43e00b523ba3766cf4fe8ebe434b606c71496bfb3c4e
 SECONDME_REDIRECT_URI=https://your-domain.up.railway.app/api/auth/callback
-
-# SecondMe API
 SECONDME_API_BASE_URL=https://app.mindos.com/gate/lab
 SECONDME_OAUTH_URL=https://go.second.me/oauth/
 SECONDME_TOKEN_ENDPOINT=https://app.mindos.com/gate/lab/api/oauth/token/code
 SECONDME_REFRESH_ENDPOINT=https://app.mindos.com/gate/lab/api/oauth/token/refresh
-
-# 应用配置
 NODE_ENV=production
 ```
 
@@ -582,3 +582,5 @@ NODE_ENV=production
 3. 添加回调地址：`https://your-domain.up.railway.app/api/auth/callback`
 
 ---
+
+*最后更新: 2026-03-25*

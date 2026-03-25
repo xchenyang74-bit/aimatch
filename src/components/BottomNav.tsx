@@ -34,7 +34,7 @@ export default function BottomNav() {
             setNotifications(data.data);
           }
         })
-        .catch(err => {
+        .catch((err: Error) => {
           console.error('Failed to load notifications:', err);
         });
     };

@@ -30,7 +30,7 @@ export default function ChatListPage() {
         }
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err: Error) => {
         console.error('Failed to load conversations:', err);
         setLoading(false);
       });

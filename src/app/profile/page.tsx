@@ -25,7 +25,7 @@ export default function ProfilePage() {
         }
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err: Error) => {
         console.error('Failed to load profile:', err);
         setLoading(false);
       });

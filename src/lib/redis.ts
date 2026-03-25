@@ -32,7 +32,7 @@ export const cache = {
   async set(key: string, value: any, ttlSeconds = 3600) {
     try {
       await redis.setex(key, ttlSeconds, JSON.stringify(value));
-    } catch (err) {
+    } catch (err: Error) {
       console.error('Cache set error:', err);
     }
   },
@@ -40,7 +40,7 @@ export const cache = {
   async delete(key: string) {
     try {
       await redis.del(key);
-    } catch (err) {
+    } catch (err: Error) {
       console.error('Cache delete error:', err);
     }
   },
