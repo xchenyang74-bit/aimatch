@@ -17,12 +17,13 @@ export async function GET() {
   const state = crypto.randomBytes(32).toString('hex');
   
   // 构建 OAuth URL
+  // 参考博弈圆桌的 scope 设置
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
     redirect_uri: redirectUri,
     state: state,
-    scope: 'user.info user.info.shades chat note.add',
+    scope: 'user.info user.info.shades chat',
   });
 
   const authUrl = `${oauthUrl}?${params.toString()}`;

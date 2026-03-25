@@ -9,8 +9,14 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { secondmeUserId: userId },
+  // 同时检查 id 和 secondmeUserId
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: userId },
+        { secondmeUserId: userId },
+      ],
+    },
   });
 
   return user;

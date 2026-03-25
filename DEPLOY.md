@@ -1,144 +1,206 @@
 # Aimatch 部署指南
 
-## 快速部署到 Railway
+## 方法一：Railway 一键部署（推荐）
 
-### 1. 准备代码
+### 步骤 1: 准备代码
+
+确保代码已提交到 GitHub：
 
 ```bash
-# 确保所有更改已提交
+cd ~/Projects/secondme-app
+git init
 git add .
-git commit -m "Ready for production"
-git push origin main
+git commit -m "Ready for Railway deployment"
 ```
 
-### 2. 创建 Railway 项目
+### 步骤 2: 在 Railway 上创建项目
 
 1. 访问 https://railway.app
 2. 点击 "New Project"
 3. 选择 "Deploy from GitHub repo"
-4. 选择你的 Aimatch 仓库
+4. 选择你的仓库
 
-### 3. 添加 PostgreSQL 数据库
+### 步骤 3: 添加数据库
 
 在项目页面：
-1. 点击 "New"
-2. 选择 "Database" → "Add PostgreSQL"
-3. 等待数据库创建完成
+1. 点击 "New" → "Database" → "Add PostgreSQL"
+2. （可选）点击 "New" → "Database" → "Add Redis"
 
-Railway 会自动注入 `DATABASE_URL` 环境变量。
+### 步骤 4: 配置环境变量
 
-### 4. 添加 Redis 缓存（可选但推荐）
+在项目页面：
+1. 点击 "Variables" 标签
+2. 添加以下变量：
 
-1. 点击 "New"
-2. 选择 "Database" → "Add Redis"
-3. Railway 会自动注入 `REDIS_URL`
-
-### 5. 配置环境变量
-
-在 Railway 项目 Settings → Variables 中添加：
-
-```
+```env
 # SecondMe OAuth2
-SECONDME_CLIENT_ID=your-client-id
-SECONDME_CLIENT_SECRET=your-client-secret
+SECONDME_CLIENT_ID=54f4205d-7a46-4140-a3b3-4227520473d3
+SECONDME_CLIENT_SECRET=cddc1cc84d0d3d1c5fee43e00b523ba3766cf4fe8ebe434b606c71496bfb3c4e
+
+# 部署后会更新这个域名
 SECONDME_REDIRECT_URI=https://your-app.up.railway.app/api/auth/callback
 
 # SecondMe API
-SECONDME_API_BASE_URL=https://api.mindverse.com/gate/lab
+SECONDME_API_BASE_URL=https://app.mindos.com/gate/lab
 SECONDME_OAUTH_URL=https://go.second.me/oauth/
-SECONDME_TOKEN_ENDPOINT=https://api.mindverse.com/gate/lab/api/oauth/token/code
-SECONDME_REFRESH_ENDPOINT=https://api.mindverse.com/gate/lab/api/oauth/token/refresh
+SECONDME_TOKEN_ENDPOINT=https://app.mindos.com/gate/lab/api/oauth/token/code
+SECONDME_REFRESH_ENDPOINT=https://app.mindos.com/gate/lab/api/oauth/token/refresh
 
 # 应用配置
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-app.up.railway.app
 ```
+
+### 步骤 5: 生成域名
+
+1. 点击你的服务（service）
+2. 点击 "Settings" 标签
+3. 点击 "Generate Domain"
+4. 复制生成的域名（如 `https://aimatch.up.railway.app`）
+
+### 步骤 6: 更新回调地址
+
+1. 更新 Railway 环境变量：
+   ```
+   SECONDME_REDIRECT_URI=https://aimatch.up.railway.app/api/auth/callback
+   ```
+
+2. 更新 SecondMe 开发者后台：
+   - 访问 https://second.me/developer
+   - 找到 Aimatch 应用
+   - 添加回调地址：`https://aimatch.up.railway.app/api/auth/callback`
+
+### 步骤 7: 重新部署
+
+在 Railway 页面点击 "Redeploy" 或推送新代码触发自动部署。
+
+---
+
+## 方法二：Railway CLI 部署
+
+### 1. 安装 Railway CLI
+
+```bash
+npm install -g @railway/cli
+```
+
+### 2. 登录 Railway
+
+```bash
+railway login
+```
+
+### 3. 初始化项目
+
+```bash
+cd ~/Projects/secondme-app
+railway init
+```
+
+选择 "Create a new project"
+
+### 4. 添加数据库
+
+```bash
+railway add --database postgres
+```
+
+### 5. 配置环境变量
+
+```bash
+railway variables
+```
+
+添加所有必需的环境变量（见上文）。
 
 ### 6. 部署
 
-Railway 会自动检测 Dockerfile 并构建部署。
-
-等待部署完成后，点击生成的域名即可访问。
-
----
-
-## 更新 SecondMe OAuth 回调地址
-
-1. 访问 https://second.me/developer
-2. 找到你的应用
-3. 添加回调地址：
-   ```
-   https://your-app.up.railway.app/api/auth/callback
-   ```
-
----
-
-## 本地测试 Docker 部署
-
 ```bash
-# 构建并启动
-docker-compose up --build
-
-# 访问 http://localhost:3000
+railway up
 ```
 
----
+### 7. 生成域名
 
-## 验证部署
+```bash
+railway domain
+```
 
-部署完成后检查以下功能：
+### 8. 更新配置
 
-- [ ] 首页正常加载
-- [ ] SecondMe 登录跳转正常
-- [ ] 登录后跳转到 Dashboard
-- [ ] 推荐列表显示正常
-- [ ] 点击"喜欢"有动画效果
-- [ ] 双向匹配后显示"发消息"按钮
-- [ ] 聊天页面加载正常
-- [ ] WebSocket 连接正常（浏览器控制台查看）
+更新环境变量和 SecondMe 回调地址（见上文步骤 6）。
 
 ---
 
-## 监控与日志
+## 方法三：Vercel 部署（备选）
 
-Railway 提供：
-- 实时日志查看
-- 资源使用监控
-- 自动 HTTPS
-- 自动重启
+如果 Railway 部署有问题，也可以使用 Vercel：
 
----
+```bash
+npm install -g vercel
+vercel login
+vercel
+```
 
-## 生产环境检查清单
-
-- [ ] 环境变量已正确配置
-- [ ] SecondMe OAuth 回调地址已更新
-- [ ] PostgreSQL 数据库已连接
-- [ ] Redis 已配置（可选）
-- [ ] 文件上传目录有写权限
-- [ ] 日志已开启
+注意：Vercel 需要额外的配置来支持 WebSocket 和自定义服务器。
 
 ---
 
-## 域名绑定（可选）
+## 部署后验证
 
-在 Railway Settings → Domains 中添加自定义域名：
-1. 输入你的域名
-2. 在 DNS 提供商添加 CNAME 记录
-3. 等待 SSL 证书自动签发
+### 检查应用状态
+
+访问以下地址验证部署：
+- 首页：`https://your-domain.up.railway.app`
+- 登录页：`https://your-domain.up.railway.app/login`
+- 调试：`https://your-domain.up.railway.app/api/debug/config`
+
+### 查看日志
+
+```bash
+railway logs
+```
+
+### 数据库迁移
+
+如果需要手动运行迁移：
+
+```bash
+railway run npx prisma migrate deploy
+```
 
 ---
 
 ## 故障排查
 
-### 数据库连接失败
-检查 `DATABASE_URL` 是否正确注入
+### 1. 部署失败
 
-### WebSocket 连接失败
-Railway 支持 WebSocket，无需额外配置。检查浏览器控制台网络请求。
+检查 Dockerfile 是否正确构建：
+```bash
+docker build -t aimatch:test .
+```
 
-### 文件上传失败
-检查磁盘空间，Railway 免费版有存储限制。
+### 2. 数据库连接失败
 
-### 内存不足
-在 Railway 设置中增加实例内存（可能需要付费）。
+确保 `DATABASE_URL` 环境变量已正确设置（Railway 会自动设置）。
+
+### 3. 登录失败
+
+检查：
+- `SECONDME_REDIRECT_URI` 是否与 Railway 域名一致
+- SecondMe 开发者后台的回调地址是否正确
+
+### 4. 环境变量未生效
+
+重新部署：
+```bash
+railway up
+```
+
+---
+
+## 自动部署（GitHub Actions）
+
+已配置 `.github/workflows/deploy-railway.yml`，只需：
+
+1. 在 GitHub 仓库设置中添加 `RAILWAY_TOKEN` secret
+2. 获取 Token：`railway token`
+3. 推送到 main 分支即可自动部署

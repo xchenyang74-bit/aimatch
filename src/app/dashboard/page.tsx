@@ -54,6 +54,12 @@ export default function DashboardPage() {
       fetch('/api/matches'),
     ])
       .then(async ([recRes, matchRes]) => {
+        // 检查是否未登录
+        if (recRes.status === 401 || matchRes.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+        
         const recData = await recRes.json();
         const matchData = await matchRes.json();
 

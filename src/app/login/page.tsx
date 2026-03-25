@@ -36,11 +36,19 @@ function LoginForm() {
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm">
-          {error === 'invalid_state' && '安全验证失败，请重试'}
-          {error === 'no_code' && '授权失败，请重试'}
-          {error === 'token_exchange' && '登录失败，请重试'}
-          {error === 'user_info' && '获取用户信息失败'}
-          {error === 'server' && '服务器错误，请稍后重试'}
+          <div className="font-medium mb-1">
+            {error === 'invalid_state' && '安全验证失败，请重试'}
+            {error === 'no_code' && '授权失败，请重试'}
+            {error === 'token_exchange' && '登录失败，请重试'}
+            {error === 'user_info' && '获取用户信息失败'}
+            {error === 'server' && '服务器错误，请稍后重试'}
+            {error === 'oauth' && 'OAuth 授权失败'}
+          </div>
+          {searchParams.get('detail') && (
+            <div className="text-xs text-red-400 mt-1 break-all font-mono">
+              详情: {decodeURIComponent(searchParams.get('detail') || '')}
+            </div>
+          )}
         </div>
       )}
 

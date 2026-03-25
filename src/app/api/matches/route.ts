@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 // 开发模式用户 ID
 const DEV_USER_ID = 'dev-user-1';
@@ -7,16 +8,26 @@ const DEV_USER_ID = 'dev-user-1';
 // 获取当前用户的所有匹配记录
 export async function GET() {
   try {
+    // 获取当前用户
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { code: 401, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
     let sentMatches: any[] = [];
     let receivedMatches: any[] = [];
     
-    // 尝试从数据库获取（生产环境可能无数据库）
+    // 尝试从数据库获取
     try {
       sentMatches = await prisma.match.findMany({
-        where: { userId: DEV_USER_ID },
+        where: { userId: user.id },
       });
       receivedMatches = await prisma.match.findMany({
-        where: { matchedUserId: DEV_USER_ID, status: 'ACCEPTED' },
+        where: { matchedUserId: user.id, status: 'ACCEPTED' },
       });
     } catch (dbError) {
       console.log('Database not available, returning empty matches');

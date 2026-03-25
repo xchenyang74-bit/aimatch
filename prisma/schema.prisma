@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -33,6 +33,8 @@ model User {
   notes             Note[]
   agentConversations1 AgentConversation[] @relation("UserAgentConversations1")
   agentConversations2 AgentConversation[] @relation("UserAgentConversations2")
+  a2aConversationsA A2AConversation[] @relation("UserA2AConversationsA")
+  a2aConversationsB A2AConversation[] @relation("UserA2AConversationsB")
   
   @@map("users")
 }
@@ -122,4 +124,42 @@ model Note {
   user        User     @relation(fields: [userId], references: [id])
   
   @@map("notes")
+}
+
+// A2A 对话记录表 - 存储两个用户 AI 分身的对话
+model A2AConversation {
+  id                  String   @id @default(cuid())
+  userAId             String   @map("user_a_id")
+  userBId             String   @map("user_b_id")
+  status              String   @default("pending") // pending, running, completed, failed
+  
+  // 匹配元数据
+  commonTags          String   @map("common_tags") // JSON: 共同标签列表
+  commonTagCount      Int      @default(0) @map("common_tag_count") // 共同标签数量
+  
+  // 对话内容
+  messages            Json?    @map("messages") // [{speaker: 'A'|'B', content: string, timestamp: string, round: number}]
+  
+  // 契合度报告
+  compatibilityScore  Float?   @map("compatibility_score") // 0-100
+  conversationQuality Json?    @map("conversation_quality") // {engagement, depth, harmony}
+  highlights          String   @map("highlights") // JSON: 精彩对话片段
+  analysisPros        String   @map("analysis_pros") // JSON: 优势
+  analysisCons        String   @map("analysis_cons") // JSON: 潜在问题
+  summary             String?  @map("summary") // 对话摘要
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+  completedAt         DateTime? @map("completed_at")
+  
+  // 关系
+  userA               User     @relation("UserA2AConversationsA", fields: [userAId], references: [id])
+  userB               User     @relation("UserA2AConversationsB", fields: [userBId], references: [id])
+  
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+  @@index([status])
+  @@index([compatibilityScore])
+  @@index([commonTagCount])
+  @@map("a2a_conversations")
 }
