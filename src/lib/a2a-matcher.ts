@@ -273,6 +273,9 @@ export async function runIncrementalMatching(): Promise<{ matched: number; faile
           status: 'running',
           commonTags: JSON.stringify(commonTags),
           commonTagCount: commonTags.length,
+          highlights: '[]',
+          analysisPros: '[]',
+          analysisCons: '[]',
         },
       });
       
