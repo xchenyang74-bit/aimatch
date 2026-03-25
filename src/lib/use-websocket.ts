@@ -66,7 +66,7 @@ export function useWebSocket({
       setIsConnected(false);
     });
 
-    socket.on('connect_error', (err) => {
+    socket.on('connect_error', (err: Error) => {
       console.error('WebSocket error:', err);
       setError('Connection failed');
     });
