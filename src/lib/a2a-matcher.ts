@@ -148,6 +148,9 @@ export async function matchNewUser(newUserId: string): Promise<{ matched: number
           status: 'running',
           commonTags: JSON.stringify(targetUser.commonTags),
           commonTagCount: targetUser.commonTagCount,
+          highlights: '[]',
+          analysisPros: '[]',
+          analysisCons: '[]',
         },
       });
       
