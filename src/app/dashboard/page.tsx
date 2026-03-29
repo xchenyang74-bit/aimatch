@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
         setLoading(false);
       })
-      .catch((err: Error) => {
+      .catch((err: any) => {
         console.error('Failed to load data:', err);
         setError('网络错误，请重试');
         setLoading(false);
@@ -102,7 +102,7 @@ export default function DashboardPage() {
         setConversationReports(prev => new Map(prev).set(userId, data.data));
         setExpandedCard(userId);
       }
-    } catch (err: Error) {
+    } catch (err: any) {
       console.error('Failed to load conversation:', err);
     } finally {
       setLoadingReports(prev => {
@@ -193,7 +193,7 @@ export default function DashboardPage() {
           return newMap;
         });
       }
-    } catch (err: Error) {
+    } catch (err: any) {
       console.error('Action failed:', err);
     }
   };

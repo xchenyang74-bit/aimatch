@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id }),
-        }).catch((err: Error) => {
+        }).catch((err: any) => {
           console.error('[OAuth] Failed to trigger A2A match:', err);
         });
       }
