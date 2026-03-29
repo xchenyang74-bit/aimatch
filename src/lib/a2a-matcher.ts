@@ -148,9 +148,9 @@ export async function matchNewUser(newUserId: string): Promise<{ matched: number
           status: 'running',
           commonTags: targetUser.commonTags,
           commonTagCount: targetUser.commonTagCount,
-          highlights: '[]',
-          analysisPros: '[]',
-          analysisCons: '[]',
+          highlights: [],
+          analysisPros: [],
+          analysisCons: [],
         },
       });
       
@@ -273,9 +273,9 @@ export async function runIncrementalMatching(): Promise<{ matched: number; faile
           status: 'running',
           commonTags: commonTags,
           commonTagCount: commonTags.length,
-          highlights: '[]',
-          analysisPros: '[]',
-          analysisCons: '[]',
+          highlights: [],
+          analysisPros: [],
+          analysisCons: [],
         },
       });
       
