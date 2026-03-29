@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -134,7 +134,7 @@ model A2AConversation {
   status              String   @default("pending") // pending, running, completed, failed
   
   // 匹配元数据
-  commonTags          String   @map("common_tags") // JSON: 共同标签列表
+  commonTags          String[] @map("common_tags")
   commonTagCount      Int      @default(0) @map("common_tag_count") // 共同标签数量
   
   // 对话内容
@@ -143,9 +143,9 @@ model A2AConversation {
   // 契合度报告
   compatibilityScore  Float?   @map("compatibility_score") // 0-100
   conversationQuality Json?    @map("conversation_quality") // {engagement, depth, harmony}
-  highlights          String   @map("highlights") // JSON: 精彩对话片段
-  analysisPros        String   @map("analysis_pros") // JSON: 优势
-  analysisCons        String   @map("analysis_cons") // JSON: 潜在问题
+  highlights          String[] @map("highlights")
+  analysisPros        String[] @map("analysis_pros")
+  analysisCons        String[] @map("analysis_cons")
   summary             String?  @map("summary") // 对话摘要
   
   createdAt           DateTime @default(now()) @map("created_at")

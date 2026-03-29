@@ -115,9 +115,9 @@ export async function GET() {
           conversationTime: conv.completedAt?.toISOString() || new Date().toISOString(),
           // 额外信息（用于展示对话报告）
           hasA2AReport: true,
-          highlights: JSON.parse(conv.highlights || '[]'),
-          analysisPros: JSON.parse(conv.analysisPros || '[]'),
-          analysisCons: JSON.parse(conv.analysisCons || '[]'),
+          highlights: conv.highlights || [],
+          analysisPros: conv.analysisPros || [],
+          analysisCons: conv.analysisCons || [],
           conversationQuality: conv.conversationQuality,
         };
       });
