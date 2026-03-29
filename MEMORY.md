@@ -340,20 +340,30 @@ await prisma.table.update({
 
 ### 问题 #9: TypeScript `catch` 块 `err` 类型错误 ⭐
 
-**现象**: `Parameter 'err' implicitly has an 'any' type`
+**现象**: 
+- `Parameter 'err' implicitly has an 'any' type`
+- `Catch clause variable type annotation must be 'any' or 'unknown' if specified`
 
 **解决方案**:
 ```typescript
-// ❌ 错误
+// ❌ 错误：未指定类型（隐式 any）
 .catch(err => { console.error(err); });
 
-catch (err) { console.error(err); }
-
-// ✅ 正确
-.catch((err: Error) => { console.error(err); });
-
+// ❌ 错误：不能指定为 Error
 catch (err: Error) { console.error(err); }
+
+// ✅ 正确：显式指定为 any
+catch (err: any) { console.error(err); }
+
+// ✅ 正确：显式指定为 unknown（更安全）
+catch (err: unknown) { 
+  if (err instanceof Error) {
+    console.error(err.message);
+  }
+}
 ```
+
+**关键教训**: TypeScript `catch` 块错误类型**只能是 `any` 或 `unknown`**，不能是其他类型。
 
 **批量修复命令**:
 ```bash
