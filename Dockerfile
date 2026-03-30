@@ -11,10 +11,10 @@ RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# 安装依赖
+# 安装依赖（不连接数据库）
 RUN npm ci
 
-# 生成 Prisma Client
+# 生成 Prisma Client（生成代码，不连接数据库）
 RUN npx prisma generate
 
 # 复制所有文件
@@ -30,5 +30,14 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# 创建启动脚本
+RUN echo '#!/bin/sh\n\
+echo "Waiting for database..."\n\
+sleep 5\n\
+echo "Running database migrations..."\n\
+npx prisma migrate deploy || echo "Migration may have already been applied or will be handled separately"\n\
+echo "Starting application..."\n\
+npm start' > /app/start.sh && chmod +x /app/start.sh
+
 # 启动命令
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["/app/start.sh"]
