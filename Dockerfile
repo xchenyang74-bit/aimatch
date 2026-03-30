@@ -30,14 +30,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 创建启动脚本
-RUN echo '#!/bin/sh\n\
-echo "Waiting for database..."\n\
-sleep 5\n\
-echo "Running database migrations..."\n\
-npx prisma migrate deploy || echo "Migration may have already been applied or will be handled separately"\n\
-echo "Starting application..."\n\
-npm start' > /app/start.sh && chmod +x /app/start.sh
-
 # 启动命令
-CMD ["/app/start.sh"]
+CMD ["npm", "start"]
