@@ -32,8 +32,9 @@ export async function GET(request: NextRequest) {
   // 处理 SecondMe 返回的错误
   if (error) {
     console.error('SecondMe OAuth error:', error, errorDescription);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const errorResponse = NextResponse.redirect(
-      new URL(`/login?error=oauth&detail=${encodeURIComponent(error)}`, request.url)
+      new URL(`/login?error=oauth&detail=${encodeURIComponent(error)}`, appUrl)
     );
     errorResponse.cookies.delete('oauth_state');
     return errorResponse;
@@ -42,8 +43,9 @@ export async function GET(request: NextRequest) {
   // 验证参数
   if (!code) {
     console.error('No code received');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const errorResponse = NextResponse.redirect(
-      new URL('/login?error=no_code', request.url)
+      new URL('/login?error=no_code', appUrl)
     );
     errorResponse.cookies.delete('oauth_state');
     return errorResponse;
@@ -92,8 +94,9 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token HTTP error:', tokenResponse.status, errorText);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
       const errorResponse = NextResponse.redirect(
-        new URL(`/login?error=token_exchange&detail=http_${tokenResponse.status}`, request.url)
+        new URL(`/login?error=token_exchange&detail=http_${tokenResponse.status}`, appUrl)
       );
       errorResponse.cookies.delete('oauth_state');
       return errorResponse;
@@ -118,8 +121,9 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.code !== 0) {
       console.error('Token exchange failed:', JSON.stringify(tokenData, null, 2));
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
       const errorResponse = NextResponse.redirect(
-        new URL(`/login?error=token_exchange&detail=${encodeURIComponent(tokenData.message || tokenData.error || 'unknown')}`, request.url)
+        new URL(`/login?error=token_exchange&detail=${encodeURIComponent(tokenData.message || tokenData.error || 'unknown')}`, appUrl)
       );
       errorResponse.cookies.delete('oauth_state');
       return errorResponse;
@@ -152,8 +156,9 @@ export async function GET(request: NextRequest) {
     // 检查必需字段
     if (!access_token) {
       console.error('Missing access_token in response:', tokenData);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
       const errorResponse = NextResponse.redirect(
-        new URL(`/login?error=token_exchange&detail=missing_access_token`, request.url)
+        new URL(`/login?error=token_exchange&detail=missing_access_token`, appUrl)
       );
       errorResponse.cookies.delete('oauth_state');
       return errorResponse;
@@ -207,8 +212,9 @@ export async function GET(request: NextRequest) {
     
     if (!finalSecondmeId) {
       console.error('No user ID found in token or profile');
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
       const errorResponse = NextResponse.redirect(
-        new URL(`/login?error=token_exchange&detail=no_user_id_found`, request.url)
+        new URL(`/login?error=token_exchange&detail=no_user_id_found`, appUrl)
       );
       errorResponse.cookies.delete('oauth_state');
       return errorResponse;
@@ -270,7 +276,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 创建成功响应（必须在设置 cookie 之前创建）
-    const successResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+    // 使用环境变量或 request.nextUrl.origin 确保正确的域名
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const successResponse = NextResponse.redirect(new URL('/dashboard', appUrl));
     
     // 清除 state cookie
     successResponse.cookies.delete('oauth_state');
@@ -289,8 +297,9 @@ export async function GET(request: NextRequest) {
     console.error('OAuth callback error:', error);
     const errorMessage = error instanceof Error ? error.message : 'unknown';
     console.error('Debug info:', debugInfo);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const errorResponse = NextResponse.redirect(
-      new URL(`/login?error=server&detail=${encodeURIComponent(errorMessage)}`, request.url)
+      new URL(`/login?error=server&detail=${encodeURIComponent(errorMessage)}`, appUrl)
     );
     errorResponse.cookies.delete('oauth_state');
     return errorResponse;
