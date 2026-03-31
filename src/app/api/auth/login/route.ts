@@ -6,9 +6,25 @@ export async function GET() {
   const redirectUri = process.env.SECONDME_REDIRECT_URI;
   const oauthUrl = process.env.SECONDME_OAUTH_URL;
 
+  // 调试：输出所有环境变量
+  console.log('Environment check:', {
+    SECONDME_CLIENT_ID: clientId ? 'set' : 'missing',
+    SECONDME_REDIRECT_URI: redirectUri ? 'set' : 'missing',
+    SECONDME_OAUTH_URL: oauthUrl ? 'set' : 'missing',
+    NODE_ENV: process.env.NODE_ENV,
+  });
+
   if (!clientId || !redirectUri || !oauthUrl) {
     return NextResponse.json(
-      { code: -1, message: 'OAuth configuration missing' },
+      { 
+        code: -1, 
+        message: 'OAuth configuration missing',
+        debug: {
+          hasClientId: !!clientId,
+          hasRedirectUri: !!redirectUri,
+          hasOauthUrl: !!oauthUrl,
+        }
+      },
       { status: 500 }
     );
   }
