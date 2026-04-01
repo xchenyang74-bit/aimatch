@@ -46,7 +46,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [matchAlert, setMatchAlert] = useState<{ show: boolean; nickname: string }>({ show: false, nickname: '' });
-  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // 加载推荐数据和匹配状态
   useEffect(() => {
@@ -66,19 +65,9 @@ export default function DashboardPage() {
         
         const recData = await recRes.json();
         const matchData = await matchRes.json();
-        
-        console.log('API data:', { recData, matchData });
-        const newVisibleCards = recData.data.slice(0, 6).map((r: Recommendation) => r.id);
-        setVisibleCards(newVisibleCards);
-        setDebugInfo(`推荐: ${recData.data?.length || 0}条, 可见: ${newVisibleCards.length}张`);
 
         if (recData.code === 0) {
           setRecommendations(recData.data);
-          const newVisible = recData.data.slice(0, 6).map((r: Recommendation) => r.id);
-          setVisibleCards(newVisible);
-          setDebugInfo(`推荐: ${recData.data.length}条, code: ${recData.code}, visible: ${newVisible.length}`);
-        } else {
-          setDebugInfo(`推荐code: ${recData.code}, message: ${recData.message}`);
         }
 
         if (matchData.code === 0) {
@@ -90,13 +79,11 @@ export default function DashboardPage() {
         }
 
         setLoading(false);
-        setDebugInfo((prev: string) => prev + ', loading=false');
       })
       .catch((err: any) => {
         console.error('Failed to load data:', err);
         setError('网络错误，请重试');
         setLoading(false);
-        setDebugInfo((prev: string) => prev + ', loading=false');
       });
   }, []);
 
@@ -246,10 +233,8 @@ export default function DashboardPage() {
   };
 
   const user = { nickname: '开发者' };
-  const visibleRecommendations = recommendations.filter(r => visibleCards.includes(r.id));
-  
-  // 调试：检查过滤结果
-  const debugFilter = `过滤前: ${recommendations.length}, 过滤后: ${visibleRecommendations.length}, visibleCards: [${visibleCards.join(',')}]`;
+  // 简化：直接显示所有推荐
+  const visibleRecommendations = recommendations;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -279,11 +264,7 @@ export default function DashboardPage() {
           <p className="text-gray-500 mt-1 text-sm">
             {loading ? '正在为你寻找合适的匹配...' : `还有 ${visibleRecommendations.length} 位待查看`}
           </p>
-          {/* 调试信息 */}
-          {debugInfo && (
-            <p className="text-xs text-blue-500 mt-1">调试: {debugInfo}</p>
-          )}
-          <p className="text-xs text-green-500 mt-1">{debugFilter}</p>
+
         </div>
 
         {/* 加载状态 */}
@@ -309,8 +290,6 @@ export default function DashboardPage() {
 
         {/* 推荐列表 - 大卡片布局（一排2-3个） */}
         {!loading && !error && (
-          <>
-          <p className="text-xs text-red-500 mb-2">调试2: recommendations={recommendations.length}, visibleCards={visibleCards.length}, visibleRecs={visibleRecommendations.length}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visibleRecommendations.map((rec) => {
               const status = matchStatuses.get(rec.id);
@@ -490,7 +469,6 @@ export default function DashboardPage() {
               );
             })}
           </div>
-          </>
         )}
 
         {/* 没有更多卡片 */}
