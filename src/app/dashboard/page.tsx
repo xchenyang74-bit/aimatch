@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [matchAlert, setMatchAlert] = useState<{ show: boolean; nickname: string }>({ show: false, nickname: '' });
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // 加载推荐数据和匹配状态
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function DashboardPage() {
         const matchData = await matchRes.json();
         
         console.log('API data:', { recData, matchData });
+        setDebugInfo(`推荐: ${recData.code} (${recData.data?.length || 0}条), 匹配: ${matchData.code} (${matchData.data?.length || 0}条)`);
 
         if (recData.code === 0) {
           setRecommendations(recData.data);
@@ -266,6 +268,10 @@ export default function DashboardPage() {
           <p className="text-gray-500 mt-1 text-sm">
             {loading ? '正在为你寻找合适的匹配...' : `还有 ${visibleRecommendations.length} 位待查看`}
           </p>
+          {/* 调试信息 */}
+          {debugInfo && (
+            <p className="text-xs text-blue-500 mt-1">调试: {debugInfo}</p>
+          )}
         </div>
 
         {/* 加载状态 */}
