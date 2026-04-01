@@ -309,6 +309,8 @@ export default function DashboardPage() {
 
         {/* 推荐列表 - 大卡片布局（一排2-3个） */}
         {!loading && !error && (
+          <>
+          <p className="text-xs text-red-500 mb-2">调试2: recommendations={recommendations.length}, visibleCards={visibleCards.length}, visibleRecs={visibleRecommendations.length}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visibleRecommendations.map((rec) => {
               const status = matchStatuses.get(rec.id);
@@ -488,6 +490,7 @@ export default function DashboardPage() {
               );
             })}
           </div>
+          </>
         )}
 
         {/* 没有更多卡片 */}
