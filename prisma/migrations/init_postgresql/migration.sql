@@ -1,2 +1,0 @@
--- PostgreSQL 初始化迁移
--- Prisma 会根据 schema 自动生成实际 SQL
