@@ -247,6 +247,9 @@ export default function DashboardPage() {
 
   const user = { nickname: '开发者' };
   const visibleRecommendations = recommendations.filter(r => visibleCards.includes(r.id));
+  
+  // 调试：检查过滤结果
+  const debugFilter = `过滤前: ${recommendations.length}, 过滤后: ${visibleRecommendations.length}, visibleCards: [${visibleCards.join(',')}]`;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -280,6 +283,7 @@ export default function DashboardPage() {
           {debugInfo && (
             <p className="text-xs text-blue-500 mt-1">调试: {debugInfo}</p>
           )}
+          <p className="text-xs text-green-500 mt-1">{debugFilter}</p>
         </div>
 
         {/* 加载状态 */}
