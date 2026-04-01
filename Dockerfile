@@ -30,5 +30,9 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# 复制启动脚本
+COPY railway-start.sh ./
+RUN chmod +x railway-start.sh
+
 # 启动命令
-CMD ["npm", "start"]
+CMD ["./railway-start.sh"]
