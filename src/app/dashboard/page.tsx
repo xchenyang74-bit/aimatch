@@ -68,7 +68,9 @@ export default function DashboardPage() {
         const matchData = await matchRes.json();
         
         console.log('API data:', { recData, matchData });
-        setDebugInfo(`推荐: ${recData.code} (${recData.data?.length || 0}条), 匹配: ${matchData.code} (${matchData.data?.length || 0}条)`);
+        const newVisibleCards = recData.data.slice(0, 6).map((r: Recommendation) => r.id);
+        setVisibleCards(newVisibleCards);
+        setDebugInfo(`推荐: ${recData.data?.length || 0}条, 可见: ${newVisibleCards.length}张`);
 
         if (recData.code === 0) {
           setRecommendations(recData.data);
