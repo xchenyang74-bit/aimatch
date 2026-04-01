@@ -74,7 +74,11 @@ export default function DashboardPage() {
 
         if (recData.code === 0) {
           setRecommendations(recData.data);
-          setVisibleCards(recData.data.slice(0, 6).map((r: Recommendation) => r.id));
+          const newVisible = recData.data.slice(0, 6).map((r: Recommendation) => r.id);
+          setVisibleCards(newVisible);
+          setDebugInfo(`推荐: ${recData.data.length}条, code: ${recData.code}, visible: ${newVisible.length}`);
+        } else {
+          setDebugInfo(`推荐code: ${recData.code}, message: ${recData.message}`);
         }
 
         if (matchData.code === 0) {
@@ -86,11 +90,13 @@ export default function DashboardPage() {
         }
 
         setLoading(false);
+        setDebugInfo((prev: string) => prev + ', loading=false');
       })
       .catch((err: any) => {
         console.error('Failed to load data:', err);
         setError('网络错误，请重试');
         setLoading(false);
+        setDebugInfo((prev: string) => prev + ', loading=false');
       });
   }, []);
 
