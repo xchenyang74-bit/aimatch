@@ -56,12 +56,17 @@ export default function DashboardPage() {
       .then(async ([recRes, matchRes]) => {
         // 检查是否未登录
         if (recRes.status === 401 || matchRes.status === 401) {
+          console.log('Unauthorized, redirecting to login');
           window.location.href = '/login';
           return;
         }
         
+        console.log('API responses:', { recStatus: recRes.status, matchStatus: matchRes.status });
+        
         const recData = await recRes.json();
         const matchData = await matchRes.json();
+        
+        console.log('API data:', { recData, matchData });
 
         if (recData.code === 0) {
           setRecommendations(recData.data);
