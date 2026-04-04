@@ -95,14 +95,14 @@ function buildSystemPrompt(speaker: A2AUser, listener: A2AUser, isFirstMessage: 
 }
 
 /**
- * 调用 SecondMe Chat API
+ * 调用 SecondMe Chat API (SSE 流式)
  */
 async function callSecondMeAPI(
   accessToken: string,
   prompt: string,
   history: { role: string; content: string }[] = []
 ): Promise<string> {
-  const apiUrl = `${process.env.SECONDME_API_BASE_URL}/api/chat`;
+  const apiUrl = `${process.env.SECONDME_API_BASE_URL}/api/secondme/chat/stream`;
   
   try {
     const response = await fetch(apiUrl, {
@@ -114,7 +114,6 @@ async function callSecondMeAPI(
       body: JSON.stringify({
         message: prompt,
         history: history,
-        stream: false,  // 非流式，简化处理
       }),
     });
     
@@ -123,8 +122,28 @@ async function callSecondMeAPI(
       throw new Error(`SecondMe API error: ${error}`);
     }
     
-    const data = await response.json();
-    return data.response || data.message || data.content || '';
+    // 解析 SSE 流式响应
+    const text = await response.text();
+    const lines = text.split('\n');
+    let fullContent = '';
+    
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') break;
+        
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.choices && parsed.choices[0]?.delta?.content) {
+            fullContent += parsed.choices[0].delta.content;
+          }
+        } catch {
+          // 忽略解析错误的行
+        }
+      }
+    }
+    
+    return fullContent || '...';
   } catch (error) {
     console.error('SecondMe API call failed:', error);
     throw error;
