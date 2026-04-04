@@ -80,10 +80,32 @@ async function testChatAPI(accessToken: string): Promise<{ success: boolean; err
   };
 }
 
-// GET - 测试 Chat API
-export async function GET() {
+// GET - 测试 Chat API 或获取用户列表
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action') || 'test';
+  
   try {
-    // 获取第一个有 token 的用户
+    if (action === 'users') {
+      // 返回所有用户列表
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          nickname: true,
+          bio: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+      
+      return Response.json({
+        code: 0,
+        data: { users },
+      });
+    }
+    
+    // 默认：测试 Chat API
     const user = await prisma.user.findFirst({
       select: {
         id: true,
@@ -101,7 +123,6 @@ export async function GET() {
     
     console.log(`[A2A Test] Testing with user: ${user.nickname} (${user.id})`);
     
-    // 测试 Chat API
     const result = await testChatAPI(user.accessToken);
     
     return Response.json({
