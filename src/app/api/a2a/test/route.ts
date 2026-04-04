@@ -10,12 +10,19 @@ import { prisma } from '@/lib/prisma';
 
 // 测试 Chat API 端点
 async function testChatAPI(accessToken: string): Promise<{ success: boolean; error?: string; response?: any }> {
-  // 尝试多个可能的端点
+  // 尝试多个可能的端点（包括官方文档端点）
   const endpoints = [
+    // 当前配置的端点
     `${process.env.SECONDME_API_BASE_URL}/api/chat`,
     `${process.env.SECONDME_API_BASE_URL}/api/secondme/chat`,
     `${process.env.SECONDME_API_BASE_URL}/api/v1/chat`,
     `${process.env.SECONDME_API_BASE_URL}/v1/chat`,
+    // 官方文档端点 (api.mindverse.com)
+    'https://api.mindverse.com/gate/lab/api/chat',
+    'https://api.mindverse.com/gate/lab/api/secondme/chat',
+    // 可能的流式端点
+    `${process.env.SECONDME_API_BASE_URL}/api/sse/chat`,
+    'https://api.mindverse.com/gate/lab/api/sse/chat',
   ];
   
   const results = [];
