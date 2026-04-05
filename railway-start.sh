@@ -59,4 +59,4 @@ echo ""
 echo "=========================================="
 echo "Starting application..."
 echo "=========================================="
-exec npm start
+exec node .next/standalone/server.js
