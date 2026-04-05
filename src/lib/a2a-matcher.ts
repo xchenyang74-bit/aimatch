@@ -38,18 +38,24 @@ async function getUserWithTags(userId: string): Promise<UserWithTags | null> {
   // 从 SecondMe 获取用户的 shades（兴趣标签）
   let tags: string[] = [];
   try {
-    const shadesRes = await fetch(`${process.env.SECONDME_API_BASE_URL}/api/users/shades`, {
+    // 使用用户信息 API 获取 shades
+    const userInfoRes = await fetch(`${process.env.SECONDME_API_BASE_URL}/api/secondme/user/info`, {
       headers: {
         'Authorization': `Bearer ${user.accessToken}`,
       },
     });
     
-    if (shadesRes.ok) {
-      const shadesData = await shadesRes.json();
-      tags = shadesData.data?.shades || [];
+    if (userInfoRes.ok) {
+      const userInfoData = await userInfoRes.json();
+      const userInfo = userInfoData.data || userInfoData;
+      // shades 可能在不同字段中
+      tags = userInfo.shades || userInfo.tags || userInfo.interests || [];
+      console.log(`[A2A] Got tags for user ${userId}:`, tags);
+    } else {
+      console.error(`[A2A] Failed to get user info: ${userInfoRes.status}`);
     }
   } catch (error) {
-    console.error(`[A2A] Failed to fetch shades for user ${userId}:`, error);
+    console.error(`[A2A] Failed to fetch tags for user ${userId}:`, error);
   }
   
   return {
