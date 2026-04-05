@@ -3,6 +3,8 @@
  * 测试整体流程，不依赖真实 API
  */
 
+export {};
+
 // 模拟用户数据
 const mockUserA = {
   id: 'user-a-001',
