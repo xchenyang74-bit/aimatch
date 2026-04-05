@@ -56,9 +56,14 @@
 - Chat API 已验证可用 ✅
 - ✅ 创建了 `/api/a2a/run` 直接执行 A2A 对话的 API
 - ✅ 修复了 `getUserWithTags` 使用正确的 SecondMe 用户信息端点
+- ✅ 本地 A2A 引擎测试通过
+
+**部署问题:**
+- ❌ Railway 服务持续 SSL_ERROR_SYSCALL，无法访问
+- ⏳ 建议迁移到 Vercel 或其他平台
 
 **需要完成:**
-- [ ] Railway 生产环境部署新版本
+- [ ] 解决部署问题（Railway 恢复或迁移到 Vercel）
 - [ ] 手动触发一次真实 A2A 对话测试
 - [ ] 验证对话结果是否正确保存到数据库
 
