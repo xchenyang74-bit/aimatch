@@ -1,0 +1,6 @@
+scripts
+*.md
+prisma/dev.db
+.github
+.vscode
+.idea
