@@ -59,8 +59,9 @@
 - ✅ 本地 A2A 引擎测试通过
 
 **部署问题:**
-- ❌ Railway 服务持续 SSL_ERROR_SYSCALL，无法访问
-- ⏳ 建议迁移到 Vercel 或其他平台
+- ❌ Railway 域名已被重定向到其他网站（项目可能被删除）
+- ✅ 已准备 Vercel 部署配置
+- ⏳ 需要重新部署到 Vercel
 
 **需要完成:**
 - [ ] 解决部署问题（Railway 恢复或迁移到 Vercel）
