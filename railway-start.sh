@@ -49,9 +49,10 @@ done
 # 验证数据库连接
 echo ""
 echo "Verifying database connection..."
-npx prisma db execute --stdin <<EOF
+npx prisma db execute --url "$DATABASE_URL" --stdin <<EOF
 SELECT 1 as connection_test;
 EOF
+echo "✅ Database connection verified"
 
 # 启动应用
 echo ""
