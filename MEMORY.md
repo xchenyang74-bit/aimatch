@@ -61,6 +61,25 @@
 - 修复了 `catch (err)` 类型错误（添加 `Error` 类型注解）
 - 更新了 MEMORY.md 结构，添加快速导航
 
+### 2026-04-01 - Dashboard 修复完成
+- **重要事件**: 修复 Railway 部署和 Dashboard 卡片显示问题
+- **状态**: ✅ 已完成
+  - PostgreSQL 数据库连接修复
+  - OAuth 登录跳转修复（NEXT_PUBLIC_APP_URL）
+  - Dashboard 推荐卡片显示正常
+  - 清理调试代码
+
+**今日对话摘要**:
+- Railway 部署成功后数据库凭证过期，重新配置 DATABASE_URL
+- OAuth 回调后重定向到 localhost，添加 NEXT_PUBLIC_APP_URL 环境变量修复
+- Dashboard 显示"加载中"但无卡片，修复 visibleCards 状态管理逻辑
+- 当前显示 6 个 mock 用户数据，A2A 真实对话待接入
+
+**明日计划**:
+1. 验证 SecondMe Chat API 是否可用
+2. 手动触发一次真实 A2A 对话
+3. 打通登录→匹配→对话→显示的完整流程
+
 ---
 
 ## 🎯 项目概述
