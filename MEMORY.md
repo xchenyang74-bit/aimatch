@@ -187,6 +187,21 @@
 
 ---
 
+## 📖 问题目录索引
+
+按类别快速查找问题：
+
+| 类别 | 问题编号 | 简述 |
+|------|---------|------|
+| **部署问题** | #11-#15 | Railway/Vercel 部署相关问题 |
+| **数据库问题** | #1, #21-#23 | Prisma、PostgreSQL、SQLite 问题 |
+| **认证问题** | #2, #4, #6 | SecondMe OAuth、Token、Cookie |
+| **TypeScript** | #9, #24 | 类型错误、编译问题 |
+| **API 问题** | #12-#14, #25 | SecondMe Chat API、A2A 引擎 |
+| **网络问题** | #26 | SSL/TLS 连接问题 |
+
+---
+
 ## 🔧 问题备忘录 / 知识点
 
 > 按编号记录所有遇到的问题，便于查阅
@@ -409,6 +424,119 @@ git filter-branch --force --index-filter \
   'git rm --cached --ignore-unmatch 大文件路径' \
   --prune-empty --tag-name-filter cat -- --all
 ```
+
+---
+
+### 问题 #11: Railway 部署 - SSL_ERROR_SYSCALL
+
+**现象**: 
+- `curl: (35) LibreSSL SSL_connect: SSL_ERROR_SYSCALL`
+- 无法通过 CLI 访问 Railway 服务
+
+**原因**:
+- 本地网络环境问题（防火墙、DNS、代理）
+- 不是 Railway 服务本身的问题
+
+**解决方案**:
+1. 使用浏览器直接访问测试
+2. 检查网络：ping / nslookup
+3. 尝试切换网络（手机热点）
+4. 等待 5-10 分钟自动恢复
+
+**验证方式**:
+```bash
+# 浏览器访问
+https://aimatch-secondme.up.railway.app/api/health
+```
+
+---
+
+### 问题 #12: Railway 启动脚本 - Prisma db execute 参数错误
+
+**现象**: 
+```
+Error: Either --url or --schema must be provided
+```
+
+**原因**: `npx prisma db execute --stdin` 缺少 `--url` 参数
+
+**解决方案**:
+```bash
+# 错误
+npx prisma db execute --stdin <<EOF
+SELECT 1;
+EOF
+
+# 正确
+npx prisma db execute --url "$DATABASE_URL" -q "SELECT 1;"
+```
+
+---
+
+### 问题 #13: Railway 启动命令 - output: standalone 不兼容
+
+**现象**: 
+```
+⚠ "next start" does not work with "output: standalone" configuration
+```
+
+**原因**: `npm start` 与 `output: 'standalone'` 配置不兼容
+
+**解决方案**:
+```bash
+# 错误
+exec npm start
+
+# 正确
+exec node .next/standalone/server.js
+```
+
+---
+
+### 问题 #14: TypeScript 编译 - 变量重复声明
+
+**现象**: 
+```
+Type error: Cannot redeclare block-scoped variable 'mockUserA'
+```
+
+**原因**: `scripts/` 目录下的测试脚本被包含在 TypeScript 编译中
+
+**解决方案**:
+```json
+// tsconfig.json
+{
+  "exclude": ["node_modules", "scripts"]
+}
+```
+
+---
+
+### 问题 #15: Railway 域名重定向问题
+
+**现象**: 
+- 访问 Railway 域名被重定向到 `js96110.com.cn`
+- 说明域名/IP 可能被回收或项目被删除
+
+**解决方案**:
+1. 登录 Railway Dashboard 检查项目状态
+2. 重新部署或创建新项目
+3. 考虑迁移到 Vercel/Render 作为备选
+
+---
+
+### 问题 #16: SecondMe Chat API - Token 过期
+
+**现象**: 
+```json
+{"code":401,"message":"Internal server error"}
+```
+
+**原因**: Access Token 已过期（有效期 2 小时）
+
+**解决方案**:
+1. 使用 Refresh Token 刷新
+2. 或让用户重新登录获取新 Token
 
 ---
 

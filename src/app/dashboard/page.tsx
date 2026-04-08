@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import BottomNav from '@/components/BottomNav';
+import { RefreshCw, Sparkles, MessageCircle, Heart, X, ChevronDown, ChevronUp, Bot, Users } from 'lucide-react';
 
 interface Recommendation {
   id: string;
@@ -13,6 +14,15 @@ interface Recommendation {
   matchReason: string;
   agentConversation: string;
   conversationTime: string;
+  source?: 'a2a' | 'mock';
+  highlights?: string[];
+  analysisPros?: string[];
+  analysisCons?: string[];
+  conversationQuality?: {
+    engagement: number;
+    depth: number;
+    harmony: number;
+  };
 }
 
 interface MatchStatus {
@@ -44,48 +54,65 @@ export default function DashboardPage() {
   const [conversationReports, setConversationReports] = useState<Map<string, AgentConversationReport>>(new Map());
   const [loadingReports, setLoadingReports] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [dataSource, setDataSource] = useState<'a2a' | 'mock' | null>(null);
   const [matchAlert, setMatchAlert] = useState<{ show: boolean; nickname: string }>({ show: false, nickname: '' });
 
-  // 加载推荐数据和匹配状态
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/recommendations'),
-      fetch('/api/matches'),
-    ])
-      .then(async ([recRes, matchRes]) => {
-        // 检查是否未登录
-        if (recRes.status === 401 || matchRes.status === 401) {
-          console.log('Unauthorized, redirecting to login');
-          window.location.href = '/login';
-          return;
-        }
+  // 加载推荐数据
+  const loadData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    
+    try {
+      const [recRes, matchRes] = await Promise.all([
+        fetch('/api/recommendations'),
+        fetch('/api/matches'),
+      ]);
+
+      if (recRes.status === 401 || matchRes.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const recData = await recRes.json();
+      const matchData = await matchRes.json();
+
+      if (recData.code === 0) {
+        setRecommendations(recData.data);
+        setDataSource(recData.source || 'mock');
         
-        console.log('API responses:', { recStatus: recRes.status, matchStatus: matchRes.status });
-        
-        const recData = await recRes.json();
-        const matchData = await matchRes.json();
-
-        if (recData.code === 0) {
-          setRecommendations(recData.data);
+        // 初始化可见卡片（前6个）
+        if (!isRefresh) {
+          setVisibleCards(recData.data.slice(0, 6).map((r: Recommendation) => r.id));
         }
+      }
 
-        if (matchData.code === 0) {
-          const statusMap = new Map();
-          matchData.data.forEach((status: MatchStatus) => {
-            statusMap.set(status.userId, status);
-          });
-          setMatchStatuses(statusMap);
-        }
+      if (matchData.code === 0) {
+        const statusMap = new Map();
+        matchData.data.forEach((status: MatchStatus) => {
+          statusMap.set(status.userId, status);
+        });
+        setMatchStatuses(statusMap);
+      }
 
-        setLoading(false);
-      })
-      .catch((err: any) => {
-        console.error('Failed to load data:', err);
-        setError('网络错误，请重试');
-        setLoading(false);
-      });
+      setError('');
+    } catch (err: any) {
+      console.error('Failed to load data:', err);
+      setError('网络错误，请重试');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 刷新数据
+  const handleRefresh = () => {
+    loadData(true);
+  };
 
   // 加载 Agent 对话报告
   const loadConversationReport = async (userId: string) => {
@@ -135,17 +162,14 @@ export default function DashboardPage() {
 
     setTimeout(() => {
       setVisibleCards(prev => {
-        const currentIndex = prev.indexOf(targetUserId);
         const newVisible = prev.filter(id => id !== targetUserId);
-        
         const allIds = recommendations.map(r => r.id);
-        const currentVisibleIndex = allIds.indexOf(targetUserId);
-        const nextCardId = allIds[currentVisibleIndex + 6];
+        const currentIndex = allIds.indexOf(targetUserId);
+        const nextCardId = allIds[currentIndex + 6];
         
         if (nextCardId && !newVisible.includes(nextCardId)) {
           newVisible.push(nextCardId);
         }
-        
         return newVisible;
       });
 
@@ -207,7 +231,7 @@ export default function DashboardPage() {
     
     return {
       opacity: 0,
-      transform: 'scale(0.8)',
+      transform: action === 'like' ? 'translateX(100px) rotate(10deg)' : 'translateX(-100px) rotate(-10deg)',
       transition: 'all 0.3s ease-out',
     };
   };
@@ -224,73 +248,111 @@ export default function DashboardPage() {
     return `${days}天前`;
   };
 
-  // 获取匹配分数的颜色
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-red-500 bg-red-50';
-    if (score >= 80) return 'text-orange-500 bg-orange-50';
-    if (score >= 70) return 'text-yellow-500 bg-yellow-50';
-    return 'text-green-500 bg-green-50';
+  // 获取匹配分数的颜色和标签
+  const getScoreInfo = (score: number) => {
+    if (score >= 90) return { color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-200', label: '绝配' };
+    if (score >= 80) return { color: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200', label: '很配' };
+    if (score >= 70) return { color: 'text-yellow-500', bg: 'bg-yellow-50', border: 'border-yellow-200', label: '较配' };
+    return { color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200', label: '一般' };
   };
 
+  // 渲染对话质量条形图
+  const renderQualityBar = (value: number, label: string, color: string) => (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-12 text-gray-400">{label}</span>
+      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div 
+          className={`h-full rounded-full ${color}`} 
+          style={{ width: `${value}%` }}
+        />
+      </div>
+      <span className="w-8 text-right font-medium">{value}</span>
+    </div>
+  );
+
   const user = { nickname: '开发者' };
-  // 简化：直接显示所有推荐
-  const visibleRecommendations = recommendations;
+  const visibleRecommendations = recommendations.filter(r => visibleCards.includes(r.id));
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-white pb-20">
       {/* 匹配成功提示 */}
       {matchAlert.show && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-orange-400 to-pink-400 text-white px-6 py-3 rounded-full shadow-lg animate-fade-in">
-          <span className="font-medium">🎉 和 {matchAlert.nickname} 匹配成功！可以开始聊天了</span>
+          <span className="font-medium flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            和 {matchAlert.nickname} 匹配成功！可以开始聊天了
+          </span>
         </div>
       )}
 
       {/* 顶部标题 */}
-      <header className="bg-white sticky top-0 z-10 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
-            Aimatch
-          </h1>
+      <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-10 border-b border-orange-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
+              Aimatch
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">AI 先聊，你再决定</p>
+          </div>
+          <button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-full hover:bg-orange-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </header>
 
       {/* 主内容区 */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* 欢迎语 */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">
-            你好，{user.nickname}！
-          </h2>
-          <p className="text-gray-500 mt-1 text-sm">
-            {loading ? '正在为你寻找合适的匹配...' : `还有 ${visibleRecommendations.length} 位待查看`}
-          </p>
-
+        {/* 欢迎语和数据来源标识 */}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              你好，{user.nickname}！
+            </h2>
+            <p className="text-gray-500 mt-1 text-sm">
+              {loading ? '正在为你寻找合适的匹配...' : `还有 ${visibleRecommendations.length} 位待查看`}
+            </p>
+          </div>
+          {dataSource && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              dataSource === 'a2a' 
+                ? 'bg-purple-50 text-purple-600 border border-purple-200' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
+              <Bot className="w-3.5 h-3.5" />
+              {dataSource === 'a2a' ? 'AI 匹配' : '演示数据'}
+            </div>
+          )}
         </div>
 
         {/* 加载状态 */}
         {loading && (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-400"></div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-400"></div>
+            <p className="text-gray-400 mt-4 text-sm">正在加载推荐...</p>
           </div>
         )}
 
         {/* 错误提示 */}
         {error && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">⚠️</div>
-            <p className="text-gray-500">{error}</p>
+          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+            <div className="text-5xl mb-3">⚠️</div>
+            <p className="text-gray-500 mb-4">{error}</p>
             <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm"
+              onClick={handleRefresh}
+              className="px-6 py-2.5 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-shadow"
             >
               重新加载
             </button>
           </div>
         )}
 
-        {/* 推荐列表 - 大卡片布局（一排2-3个） */}
+        {/* 推荐列表 */}
         {!loading && !error && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {visibleRecommendations.map((rec) => {
               const status = matchStatuses.get(rec.id);
               const isLiked = status?.iLiked;
@@ -298,24 +360,51 @@ export default function DashboardPage() {
               const isExpanded = expandedCard === rec.id;
               const report = conversationReports.get(rec.id);
               const isLoadingReport = loadingReports.has(rec.id);
+              const scoreInfo = getScoreInfo(rec.matchScore);
 
               return (
                 <div 
                   key={rec.id} 
-                  className={`bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-orange-200 sm:col-span-2 md:col-span-2' : ''}`}
+                  className={`bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 ${
+                    isExpanded ? 'md:col-span-2 xl:col-span-2 ring-2 ring-orange-200' : ''
+                  }`}
                   style={getCardAnimationStyle(rec.id)}
                 >
                   {/* 头像区域 */}
-                  <div className="aspect-[4/3] bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center relative overflow-hidden">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white shadow-md flex items-center justify-center text-4xl sm:text-5xl transition-transform group-hover:scale-110">
-                      👤
+                  <div className="aspect-[16/10] bg-gradient-to-br from-orange-100 via-pink-50 to-purple-100 flex items-center justify-center relative overflow-hidden">
+                    {/* 背景装饰 */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-10 left-10 w-20 h-20 bg-orange-300 rounded-full blur-3xl"></div>
+                      <div className="absolute bottom-10 right-10 w-32 h-32 bg-pink-300 rounded-full blur-3xl"></div>
                     </div>
+                    
+                    {/* 头像 */}
+                    <div className="relative z-10">
+                      <div className="w-24 h-24 rounded-full bg-white shadow-lg flex items-center justify-center text-5xl ring-4 ring-white/50">
+                        {rec.avatar ? (
+                          <img src={rec.avatar} alt={rec.nickname} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          '👤'
+                        )}
+                      </div>
+                    </div>
+                    
                     {/* 匹配度角标 */}
-                    <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full ${getScoreColor(rec.matchScore)}`}>
-                      <span className="text-xs font-bold">{rec.matchScore}%</span>
+                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full ${scoreInfo.bg} ${scoreInfo.color} border ${scoreInfo.border} shadow-sm`}>
+                      <span className="text-sm font-bold">{rec.matchScore}%</span>
+                      <span className="text-xs ml-1 opacity-75">{scoreInfo.label}</span>
                     </div>
-                    {/* Agent 对话时间 */}
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+                    
+                    {/* A2A 标识 */}
+                    {rec.source === 'a2a' && (
+                      <div className="absolute top-3 left-3 bg-purple-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        AI 对话
+                      </div>
+                    )}
+                    
+                    {/* 对话时间 */}
+                    <div className="absolute bottom-3 left-3 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full">
                       {formatTime(rec.conversationTime)}
                     </div>
                   </div>
@@ -323,53 +412,83 @@ export default function DashboardPage() {
                   {/* 信息区域 */}
                   <div className="p-5">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-gray-800 text-lg truncate">
+                      <h3 className="font-bold text-gray-800 text-lg">
                         {rec.nickname}
                       </h3>
                       {isMatch && (
-                        <span className="text-red-500 text-xs">❤️</span>
+                        <span className="flex items-center gap-1 text-red-500 text-sm font-medium">
+                          <Heart className="w-4 h-4 fill-current" />
+                          已匹配
+                        </span>
                       )}
                     </div>
                     
                     {/* 推荐理由 */}
-                    <p className="text-sm text-orange-600 mb-3 line-clamp-1">
-                      {rec.matchReason}
-                    </p>
+                    <div className="flex items-start gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-orange-600 line-clamp-2">
+                        {rec.matchReason}
+                      </p>
+                    </div>
                     
                     {/* 标签 */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {rec.tags.slice(0, 3).map((tag) => (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {rec.tags.slice(0, 4).map((tag) => (
                         <span 
                           key={tag} 
-                          className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full"
+                          className="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-full border border-gray-100"
                         >
                           {tag}
                         </span>
                       ))}
-                      {rec.tags.length > 3 && (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-400 text-sm rounded-full">
-                          +{rec.tags.length - 3}
+                      {rec.tags.length > 4 && (
+                        <span className="px-3 py-1 bg-gray-50 text-gray-400 text-xs rounded-full">
+                          +{rec.tags.length - 4}
                         </span>
                       )}
                     </div>
                     
                     {/* Agent 对话摘要 */}
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-4">
-                      Agent: {rec.agentConversation}
-                    </p>
+                    {rec.agentConversation && (
+                      <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-3 mb-4">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>AI 对话摘要</span>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {rec.agentConversation}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 对话质量指标（仅 A2A 数据） */}
+                    {rec.conversationQuality && (
+                      <div className="mb-4 space-y-2">
+                        {renderQualityBar(rec.conversationQuality.engagement, '互动', 'bg-purple-400')}
+                        {renderQualityBar(rec.conversationQuality.depth, '深度', 'bg-blue-400')}
+                        {renderQualityBar(rec.conversationQuality.harmony, '和谐', 'bg-green-400')}
+                      </div>
+                    )}
 
                     {/* 查看对话分析按钮 */}
                     <button
                       onClick={(e) => toggleExpand(rec.id, e)}
-                      className="w-full py-2.5 mb-4 bg-orange-50 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-100 transition-colors flex items-center justify-center"
+                      className="w-full py-2.5 mb-4 bg-white border border-orange-200 text-orange-600 rounded-xl text-sm font-medium hover:bg-orange-50 transition-colors flex items-center justify-center gap-1"
                     >
-                      {isExpanded ? (
+                      {isLoadingReport ? (
                         <>
-                          <span className="mr-1">▲</span> 收起分析
+                          <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                          加载中...
+                        </>
+                      ) : isExpanded ? (
+                        <>
+                          <ChevronUp className="w-4 h-4" />
+                          收起分析
                         </>
                       ) : (
                         <>
-                          <span className="mr-1">▼</span> 查看对话分析
+                          <ChevronDown className="w-4 h-4" />
+                          查看对话分析
                         </>
                       )}
                     </button>
@@ -377,69 +496,69 @@ export default function DashboardPage() {
                     {/* 展开的对话报告 */}
                     {isExpanded && (
                       <div className="border-t border-orange-100 pt-4 mb-4">
-                        {isLoadingReport ? (
-                          <div className="text-center py-4">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-400 mx-auto"></div>
-                            <p className="text-sm text-gray-400 mt-2">加载中...</p>
-                          </div>
-                        ) : report ? (
+                        {report ? (
                           <div className="space-y-4">
                             {/* 统计 */}
-                            <div className="flex space-x-3 text-sm">
-                              <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-                                <div className="text-gray-400 mb-1">时长</div>
-                                <div className="font-semibold text-gray-700 text-lg">{report.duration}</div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-gray-50 rounded-xl p-3 text-center">
+                                <div className="text-gray-400 text-xs mb-1">对话时长</div>
+                                <div className="font-bold text-gray-700">{report.duration}</div>
                               </div>
-                              <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-                                <div className="text-gray-400 mb-1">消息</div>
-                                <div className="font-semibold text-gray-700 text-lg">{report.messageCount}</div>
+                              <div className="bg-gray-50 rounded-xl p-3 text-center">
+                                <div className="text-gray-400 text-xs mb-1">消息数量</div>
+                                <div className="font-bold text-gray-700">{report.messageCount}</div>
                               </div>
                             </div>
 
-                            {/* 好感度 */}
-                            <div>
-                              <div className="text-sm text-gray-400 mb-2">好感度变化</div>
-                              <div className="flex items-end space-x-2 h-12">
-                                {report.compatibilityProgress.map((score, idx) => (
-                                  <div key={idx} className="flex-1 flex flex-col items-center">
-                                    <div className="text-sm text-orange-500 mb-1">{score}</div>
-                                    <div 
-                                      className="w-full bg-orange-200 rounded-md"
-                                      style={{ height: `${score * 0.4}px` }}
-                                    />
-                                  </div>
-                                ))}
+                            {/* 优点 */}
+                            {report.analysis.pros.length > 0 && (
+                              <div className="bg-green-50 rounded-xl p-3">
+                                <div className="text-green-600 text-xs font-medium mb-2 flex items-center gap-1">
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  契合点
+                                </div>
+                                <ul className="space-y-1">
+                                  {report.analysis.pros.map((pro, idx) => (
+                                    <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                                      <span className="text-green-500 mt-0.5">+</span>
+                                      {pro}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
-                            </div>
+                            )}
 
                             {/* 精彩对话 */}
-                            <div className="bg-gray-50 rounded-xl p-3">
-                              <div className="text-sm text-gray-500 mb-2">💬 精彩对话</div>
-                              <div className="space-y-2 max-h-32 overflow-y-auto">
-                                {report.highlights.slice(0, 3).map((msg, idx) => (
-                                  <div key={idx} className="text-sm">
-                                    <span className="text-orange-600 font-medium">{msg.speaker}:</span>
-                                    <span className="text-gray-600 ml-1">{msg.content.slice(0, 40)}...</span>
-                                  </div>
-                                ))}
+                            {report.highlights.length > 0 && (
+                              <div className="bg-orange-50 rounded-xl p-3">
+                                <div className="text-orange-600 text-xs font-medium mb-2">💬 精彩对话</div>
+                                <div className="space-y-2 max-h-40 overflow-y-auto">
+                                  {report.highlights.slice(0, 3).map((msg, idx) => (
+                                    <div key={idx} className="text-sm text-gray-600 bg-white rounded-lg p-2">
+                                      <span className="text-orange-500 font-medium">{msg.speaker}:</span>
+                                      <span className="ml-1">{msg.content.slice(0, 60)}...</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         ) : (
-                          <div className="text-center text-xs text-gray-400 py-2">
-                            加载失败
+                          <div className="text-center text-sm text-gray-400 py-4">
+                            暂无详细对话报告
                           </div>
                         )}
                       </div>
                     )}
 
                     {/* 操作按钮 */}
-                    <div className="flex space-x-3">
+                    <div className="flex gap-3">
                       {isMatch ? (
                         <button
                           onClick={() => window.location.href = `/chat/${rec.id}`}
-                          className="flex-1 py-3 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-xl text-sm font-medium"
+                          className="flex-1 py-3 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-shadow flex items-center justify-center gap-2"
                         >
+                          <MessageCircle className="w-4 h-4" />
                           发消息
                         </button>
                       ) : (
@@ -447,19 +566,21 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handleAction(rec.id, 'like', rec.nickname)}
                             disabled={isLiked}
-                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                               isLiked 
                                 ? 'bg-red-100 text-red-500' 
-                                : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                                : 'bg-gradient-to-r from-red-400 to-pink-400 text-white hover:shadow-lg'
                             }`}
                           >
-                            {isLiked ? '已喜欢' : '❤️ 喜欢'}
+                            <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                            {isLiked ? '已喜欢' : '喜欢'}
                           </button>
                           <button
                             onClick={() => handleAction(rec.id, 'dislike', rec.nickname)}
-                            className="flex-1 py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors"
+                            className="flex-1 py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
                           >
-                            ✕ 跳过
+                            <X className="w-4 h-4" />
+                            跳过
                           </button>
                         </>
                       )}
@@ -473,28 +594,31 @@ export default function DashboardPage() {
 
         {/* 没有更多卡片 */}
         {!loading && !error && visibleRecommendations.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-3">🎉</div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-1">今天的推荐已看完</h3>
-            <p className="text-gray-500 text-sm mb-4">明天会有新的匹配推荐给你</p>
+          <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
+            <div className="text-6xl mb-4">🎉</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">今天的推荐已看完</h3>
+            <p className="text-gray-500 mb-6">明天会有新的匹配推荐给你</p>
+            <button 
+              onClick={handleRefresh}
+              className="px-6 py-2.5 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-shadow"
+            >
+              刷新看看
+            </button>
           </div>
         )}
 
         {/* 加载更多 */}
-        {!loading && !error && visibleRecommendations.length > 0 && (
+        {!loading && !error && visibleRecommendations.length > 0 && visibleRecommendations.length < recommendations.length && (
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-400 mb-2">
-              还有 {recommendations.length - visibleCards.length} 位匹配对象
-            </p>
             <button 
               onClick={() => {
                 const currentLen = visibleCards.length;
-                const newCards = recommendations.slice(currentLen, currentLen + 5).map(r => r.id);
+                const newCards = recommendations.slice(currentLen, currentLen + 3).map(r => r.id);
                 setVisibleCards(prev => [...prev, ...newCards]);
               }}
-              className="px-6 py-2.5 bg-white rounded-full text-gray-600 text-sm shadow-sm hover:shadow-md transition-shadow"
+              className="px-8 py-3 bg-white border border-gray-200 rounded-full text-gray-600 text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
             >
-              加载更多
+              加载更多 ({recommendations.length - visibleRecommendations.length})
             </button>
           </div>
         )}
