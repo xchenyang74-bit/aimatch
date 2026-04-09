@@ -3,19 +3,46 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, MessageCircle, Heart, Loader2 } from 'lucide-react';
 
+// 特性数据
+const features = [
+  {
+    icon: Sparkles,
+    title: 'AI Agent 智能匹配',
+    desc: '两个 AI 分身先对话，发现契合点',
+    gradient: 'from-orange-400 to-orange-500',
+    bgGradient: 'from-orange-50 to-transparent',
+    borderColor: 'border-orange-100/50',
+  },
+  {
+    icon: MessageCircle,
+    title: 'Agent 先聊，你再决定',
+    desc: '基于 AI 对话报告，选择是否匹配',
+    gradient: 'from-pink-400 to-pink-500',
+    bgGradient: 'from-pink-50 to-transparent',
+    borderColor: 'border-pink-100/50',
+  },
+  {
+    icon: Heart,
+    title: '每日精选推荐',
+    desc: '根据兴趣标签，推荐最契合的人',
+    gradient: 'from-purple-400 to-purple-500',
+    bgGradient: 'from-purple-50 to-transparent',
+    borderColor: 'border-purple-100/50',
+  },
+];
+
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const [errorInfo, setErrorInfo] = useState<{ error: string | null; detail: string | null }>({ error: null, detail: null });
+  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(null);
 
-  // 客户端获取 URL 参数
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      setErrorInfo({
-        error: params.get('error'),
-        detail: params.get('detail'),
-      });
-    }
+    setMounted(true);
+    // 获取 URL 参数
+    const params = new URLSearchParams(window.location.search);
+    setError(params.get('error'));
+    setDetail(params.get('detail'));
   }, []);
 
   const handleLogin = async () => {
@@ -71,16 +98,16 @@ export default function LoginPage() {
           <p className="text-gray-500">AI 驱动的社交匹配平台</p>
         </div>
 
-        {/* 错误提示 */}
-        {errorInfo.error && (
+        {/* 错误提示 - 只在客户端挂载后显示 */}
+        {mounted && error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm">
             <div className="font-medium mb-1 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-              {getErrorMessage(errorInfo.error)}
+              {getErrorMessage(error)}
             </div>
-            {errorInfo.detail && (
+            {detail && (
               <div className="text-xs text-red-400 mt-1 break-all font-mono bg-red-100/50 p-2 rounded">
-                {decodeURIComponent(errorInfo.detail)}
+                {decodeURIComponent(detail)}
               </div>
             )}
           </div>
@@ -88,35 +115,23 @@ export default function LoginPage() {
 
         {/* 特性介绍 */}
         <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-orange-50 to-transparent border border-orange-100/50">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center shadow-md">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">AI Agent 智能匹配</h3>
-              <p className="text-sm text-gray-500">两个 AI 分身先对话，发现契合点</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-pink-50 to-transparent border border-pink-100/50">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-md">
-              <MessageCircle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">Agent 先聊，你再决定</h3>
-              <p className="text-sm text-gray-500">基于 AI 对话报告，选择是否匹配</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-transparent border border-purple-100/50">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center shadow-md">
-              <Heart className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">每日精选推荐</h3>
-              <p className="text-sm text-gray-500">根据兴趣标签，推荐最契合的人</p>
-            </div>
-          </div>
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <div 
+                key={index}
+                className={`flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r ${feature.bgGradient} border ${feature.borderColor}`}
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-md`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">{feature.title}</h3>
+                  <p className="text-sm text-gray-500">{feature.desc}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* 登录按钮 */}
