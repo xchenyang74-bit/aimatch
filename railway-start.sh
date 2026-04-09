@@ -24,6 +24,22 @@ fi
 echo "✅ Database URL is configured"
 echo "Database host: $(echo $DATABASE_URL | sed 's/.*@//; s/:.*//; s/\/.*//')"
 
+# 复制静态文件到 standalone 目录
+echo ""
+echo "Copying static files..."
+if [ -d ".next/static" ]; then
+  mkdir -p .next/standalone/.next/static
+  cp -r .next/static/* .next/standalone/.next/static/ 2>/dev/null || true
+  echo "✅ Static files copied"
+fi
+
+# 复制 public 文件
+echo "Copying public files..."
+if [ -d "public" ]; then
+  cp -r public/* .next/standalone/ 2>/dev/null || true
+  echo "✅ Public files copied"
+fi
+
 # 运行数据库迁移（带重试）
 echo ""
 echo "=========================================="
