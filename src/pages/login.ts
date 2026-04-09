@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 const LOGIN_HTML = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -66,12 +66,6 @@ const LOGIN_HTML = `<!DOCTYPE html>
       text-decoration: none;
     }
     .footer { margin-top: 24px; font-size: 12px; color: #9ca3af; }
-    .error {
-      margin-bottom: 20px; padding: 12px;
-      background: #fef2f2; border: 1px solid #fecaca;
-      border-radius: 8px; color: #dc2626;
-      font-size: 14px; display: none;
-    }
   </style>
 </head>
 <body>
@@ -79,7 +73,6 @@ const LOGIN_HTML = `<!DOCTYPE html>
     <div class="logo">✨</div>
     <h1>Aimatch</h1>
     <p class="subtitle">AI 驱动的社交匹配平台</p>
-    <div id="error" class="error"></div>
     <div class="feature f1">
       <span class="fi">🤖</span>
       <div><div class="ft">AI Agent 智能匹配</div><div class="fd">两个 AI 分身先对话，发现契合点</div></div>
@@ -95,20 +88,10 @@ const LOGIN_HTML = `<!DOCTYPE html>
     <a href="/api/auth/login" class="btn"><span>✨</span><span>使用 SecondMe 登录</span></a>
     <p class="footer">登录即表示你同意我们的服务条款和隐私政策</p>
   </div>
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get('error');
-    if (error) {
-      const msgs = {invalid_state:'安全验证失败',no_code:'授权失败',token_exchange:'登录失败',user_info:'获取用户信息失败',server:'服务器错误',oauth:'OAuth 授权失败'};
-      document.getElementById('error').textContent = msgs[error] || '登录失败';
-      document.getElementById('error').style.display = 'block';
-    }
-  </script>
 </body>
 </html>`;
 
-export async function GET(request: Request) {
-  return new NextResponse(LOGIN_HTML, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
-  });
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(LOGIN_HTML);
 }
