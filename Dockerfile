@@ -24,6 +24,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
+# 复制 server.js 到 standalone 目录
+RUN cp server.js .next/standalone/ 2>/dev/null || true
+RUN cp -r public/* .next/standalone/ 2>/dev/null || true
+RUN cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+
 # 暴露端口
 EXPOSE 3000
 
