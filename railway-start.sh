@@ -76,4 +76,9 @@ echo ""
 echo "=========================================="
 echo "Starting application..."
 echo "=========================================="
-exec node .next/standalone/server.js
+# 优先使用自定义 server.js，如果不存在则使用 standalone
+if [ -f "server.js" ]; then
+  exec node server.js
+else
+  exec node .next/standalone/server.js
+fi
