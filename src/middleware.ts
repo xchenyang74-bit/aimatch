@@ -4,9 +4,9 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // 将 /login 重写到 /login.html
+  // 将 /login 重定向到 /login.html
   if (pathname === '/login') {
-    return NextResponse.rewrite(new URL('/login.html', request.url));
+    return NextResponse.redirect(new URL('/login.html', request.url));
   }
   
   // 公开路由
@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
   if (isProtected) {
     const userId = request.cookies.get('user_id')?.value;
     if (!userId) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL('/login.html', request.url));
     }
   }
   
