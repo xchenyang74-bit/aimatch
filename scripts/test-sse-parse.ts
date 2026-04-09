@@ -3,6 +3,8 @@
  * 验证 SecondMe Chat API 的 SSE 响应解析逻辑
  */
 
+export {};
+
 // 真实的 SSE 响应示例（来自之前的测试）
 const realSSEResponse = `event: session
 data: {"sessionId": "labs_sess_xxx"}
