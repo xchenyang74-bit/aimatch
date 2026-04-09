@@ -15,6 +15,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
+# 确保 public 文件被复制到 standalone
+RUN cp -r public/* .next/standalone/ 2>/dev/null || true
+RUN cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+
 EXPOSE 3000
 
 ENV NODE_ENV=production
