@@ -95,3 +95,4 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.status(200).send(LOGIN_HTML);
 }
+// Cache bust: 1775746920
