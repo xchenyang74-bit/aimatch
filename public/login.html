@@ -1,6 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-
-const LOGIN_HTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -89,10 +87,4 @@ const LOGIN_HTML = `<!DOCTYPE html>
     <p class="footer">登录即表示你同意我们的服务条款和隐私政策</p>
   </div>
 </body>
-</html>`;
-
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.status(200).send(LOGIN_HTML);
-}
-// Cache bust: 1775746920
+</html>
