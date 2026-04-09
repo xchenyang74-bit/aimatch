@@ -1,3 +1,6 @@
+// Force static generation - no client-side JavaScript
+export const dynamic = 'force-static';
+
 export default function LoginPage() {
   return (
     <html lang="zh-CN">
@@ -5,7 +8,7 @@ export default function LoginPage() {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Aimatch - AI 驱动的社交匹配平台</title>
-        <style dangerouslySetInnerHTML={{__html: `
+        <style>{`
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #fff7ed, #fdf2f8); font-family: system-ui, sans-serif; padding: 16px; }
           .card { background: white; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); padding: 32px; width: 100%; max-width: 400px; text-align: center; }
@@ -17,7 +20,7 @@ export default function LoginPage() {
           .fi { font-size: 24px; } .ft { font-weight: 600; color: #1f2937; } .fd { font-size: 14px; color: #6b7280; }
           .btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #fb923c, #ec4899); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
           .footer { margin-top: 24px; font-size: 12px; color: #9ca3af; }
-        `}} />
+        `}</style>
       </head>
       <body>
         <div className="card">
