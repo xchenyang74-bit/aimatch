@@ -5,7 +5,19 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
-// Rebuild: 2026年 4月 9日 星期四 23时17分49秒 CST
