@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aimatch - AI 驱动的社交匹配平台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fff7ed, #fdf2f8, #faf5ff);
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .subtitle { color: #6b7280; margin-bottom: 32px; }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+    .feature:nth-child(1) { background: #fff7ed; }
+    .feature:nth-child(2) { background: #fdf2f8; }
+    .feature:nth-child(3) { background: #faf5ff; }
+    .feature-icon { font-size: 24px; }
+    .feature-title { font-weight: 600; color: #1f2937; }
+    .feature-desc { font-size: 14px; color: #6b7280; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover { opacity: 0.9; }
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .error {
+      display: none;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #dc2626;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">✨</div>
+    <h1>Aimatch</h1>
+    <p class="subtitle">AI 驱动的社交匹配平台</p>
+    
+    <div id="error" class="error"></div>
+    
+    <div class="feature">
+      <span class="feature-icon">🤖</span>
+      <div>
+        <div class="feature-title">AI Agent 智能匹配</div>
+        <div class="feature-desc">两个 AI 分身先对话，发现契合点</div>
+      </div>
+    </div>
+    
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div>
+        <div class="feature-title">Agent 先聊，你再决定</div>
+        <div class="feature-desc">基于 AI 对话报告，选择是否匹配</div>
+      </div>
+    </div>
+    
+    <div class="feature">
+      <span class="feature-icon">❤️</span>
+      <div>
+        <div class="feature-title">每日精选推荐</div>
+        <div class="feature-desc">根据兴趣标签，推荐最契合的人</div>
+      </div>
+    </div>
+    
+    <button class="btn" onclick="login()">
+      <span>✨</span>
+      <span id="btn-text">使用 SecondMe 登录</span>
+    </button>
+    
+    <p class="footer">登录即表示你同意我们的服务条款和隐私政策</p>
+  </div>
+
+  <script>
+    // 显示错误信息
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error) {
+      const messages = {
+        invalid_state: '安全验证失败，请重试',
+        no_code: '授权失败，请重试',
+        token_exchange: '登录失败，请重试',
+        user_info: '获取用户信息失败',
+        server: '服务器错误，请稍后重试',
+        oauth: 'OAuth 授权失败'
+      };
+      document.getElementById('error').textContent = messages[error] || '登录失败';
+      document.getElementById('error').style.display = 'block';
+    }
+
+    async function login() {
+      const btn = document.querySelector('.btn');
+      const btnText = document.getElementById('btn-text');
+      btn.disabled = true;
+      btnText.textContent = '跳转中...';
+      
+      try {
+        const res = await fetch('/api/auth/login');
+        const data = await res.json();
+        if (data.code === 0 && data.data.authUrl) {
+          window.location.href = data.data.authUrl;
+        } else {
+          alert('登录初始化失败：' + (data.message || '未知错误'));
+          btn.disabled = false;
+          btnText.textContent = '使用 SecondMe 登录';
+        }
+      } catch (err) {
+        alert('网络错误，请重试');
+        btn.disabled = false;
+        btnText.textContent = '使用 SecondMe 登录';
+      }
+    }
+  </script>
+</body>
+</html>
