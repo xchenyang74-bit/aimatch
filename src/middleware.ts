@@ -1,59 +1,190 @@
-/**
- * 认证中间件
- * 保护需要登录的路由
- */
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// 需要保护的路由
-const PROTECTED_ROUTES = ['/dashboard', '/chat', '/profile'];
-
-// 公开路由
-const PUBLIC_ROUTES = ['/login', '/api/auth'];
+// 登录页面 HTML
+const loginHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aimatch - AI 驱动的社交匹配平台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fff7ed, #fdf2f8);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .subtitle { color: #6b7280; margin-bottom: 32px; }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+    .feature:nth-child(1) { background: #fff7ed; }
+    .feature:nth-child(2) { background: #fdf2f8; }
+    .feature:nth-child(3) { background: #faf5ff; }
+    .feature-icon { font-size: 24px; }
+    .feature-title { font-weight: 600; color: #1f2937; }
+    .feature-desc { font-size: 14px; color: #6b7280; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #fb923c, #ec4899);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .btn:hover { opacity: 0.9; }
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .error {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #dc2626;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">✨</div>
+    <h1>Aimatch</h1>
+    <p class="subtitle">AI 驱动的社交匹配平台</p>
+    
+    <div id="error" class="error" style="display:none"></div>
+    
+    <div class="feature">
+      <span class="feature-icon">🤖</span>
+      <div>
+        <div class="feature-title">AI Agent 智能匹配</div>
+        <div class="feature-desc">两个 AI 分身先对话，发现契合点</div>
+      </div>
+    </div>
+    
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div>
+        <div class="feature-title">Agent 先聊，你再决定</div>
+        <div class="feature-desc">基于 AI 对话报告，选择是否匹配</div>
+      </div>
+    </div>
+    
+    <div class="feature">
+      <span class="feature-icon">❤️</span>
+      <div>
+        <div class="feature-title">每日精选推荐</div>
+        <div class="feature-desc">根据兴趣标签，推荐最契合的人</div>
+      </div>
+    </div>
+    
+    <a href="/api/auth/login" class="btn">
+      <span>✨</span>
+      <span>使用 SecondMe 登录</span>
+    </a>
+    
+    <p class="footer">登录即表示你同意我们的服务条款和隐私政策</p>
+  </div>
+  
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error) {
+      const messages = {
+        invalid_state: '安全验证失败，请重试',
+        no_code: '授权失败，请重试',
+        token_exchange: '登录失败，请重试',
+        user_info: '获取用户信息失败',
+        server: '服务器错误，请稍后重试',
+        oauth: 'OAuth 授权失败'
+      };
+      document.getElementById('error').textContent = messages[error] || '登录失败';
+      document.getElementById('error').style.display = 'block';
+    }
+  </script>
+</body>
+</html>`;
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // 检查是否是公开路由
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+  // 直接返回登录页面 HTML
+  if (pathname === '/login') {
+    return new NextResponse(loginHtml, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+  
+  // 公开路由
+  if (pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
   
-  // 检查是否是 API 路由（除了特定的 auth 路由外，其他 API 也需要保护）
-  if (pathname.startsWith('/api/')) {
-    // API 路由的认证在各自的路由中处理
-    return NextResponse.next();
+  // 需要保护的路由
+  const protectedRoutes = ['/dashboard', '/chat', '/profile'];
+  const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
+  
+  if (isProtected) {
+    const userId = request.cookies.get('user_id')?.value;
+    if (!userId) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
   
-  // 检查是否需要保护
-  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-  
-  if (!isProtected) {
-    return NextResponse.next();
-  }
-  
-  // 检查登录状态
-  const userId = request.cookies.get('user_id')?.value;
-  
-  if (!userId) {
-    // 未登录，重定向到登录页
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-  
-  // 已登录，继续访问
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * 匹配所有路径，除了：
-     * - _next/static (静态文件)
-     * - _next/image (图片优化)
-     * - favicon.ico (网站图标)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
