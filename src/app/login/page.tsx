@@ -1,3 +1,7 @@
+// Force dynamic rendering to avoid caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function LoginPage() {
   return (
     <div style={{ 
@@ -90,4 +94,3 @@ export default function LoginPage() {
     </div>
   );
 }
-// Build timestamp: 2026年 4月 9日 星期四 10时31分29秒 CST
