@@ -4,13 +4,8 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // 将 /login 重定向到 /login.html
-  if (pathname === '/login') {
-    return NextResponse.redirect(new URL('/login.html', request.url));
-  }
-  
-  // 公开路由
-  if (pathname.startsWith('/api/auth') || pathname === '/login.html') {
+  // 公开路由（不需要登录）
+  if (pathname.startsWith('/api/auth') || pathname === '/login') {
     return NextResponse.next();
   }
   
@@ -21,7 +16,7 @@ export function middleware(request: NextRequest) {
   if (isProtected) {
     const userId = request.cookies.get('user_id')?.value;
     if (!userId) {
-      return NextResponse.redirect(new URL('/login.html', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
   
