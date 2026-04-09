@@ -4,8 +4,13 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // 公开路由 - 让 login 页面自己处理
-  if (pathname.startsWith('/api/auth') || pathname === '/login') {
+  // 将 /login 重写到 /login.html
+  if (pathname === '/login') {
+    return NextResponse.rewrite(new URL('/login.html', request.url));
+  }
+  
+  // 公开路由
+  if (pathname.startsWith('/api/auth') || pathname === '/login.html') {
     return NextResponse.next();
   }
   
