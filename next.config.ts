@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/login',
+        destination: '/login.html',
+      },
+    ];
+  },
   images: {
     unoptimized: true,
   },
