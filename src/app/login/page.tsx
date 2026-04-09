@@ -87,7 +87,7 @@ export default function LoginPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
             Aimatch
           </h1>
-          <p className="text-gray-500">AI 驱动的社交匹配平台</p>
+          <p className="text-gray-500">AI 驱动的社交匹配平台 (v2)</p>
         </div>
 
         {/* 错误提示 - 只在客户端显示 */}
