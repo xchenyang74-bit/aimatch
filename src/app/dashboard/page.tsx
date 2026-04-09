@@ -46,6 +46,7 @@ interface AgentConversationReport {
 type CardAction = 'like' | 'dislike' | null;
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [visibleCards, setVisibleCards] = useState<string[]>([]);
   const [cardActions, setCardActions] = useState<Map<string, CardAction>>(new Map());
@@ -58,6 +59,11 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [dataSource, setDataSource] = useState<'a2a' | 'mock' | null>(null);
   const [matchAlert, setMatchAlert] = useState<{ show: boolean; nickname: string }>({ show: false, nickname: '' });
+
+  // 客户端挂载
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 加载推荐数据
   const loadData = useCallback(async (isRefresh = false) => {
@@ -272,6 +278,27 @@ export default function DashboardPage() {
 
   const user = { nickname: '开发者' };
   const visibleRecommendations = recommendations.filter(r => visibleCards.includes(r.id));
+
+  // 服务端渲染时显示骨架屏
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-white pb-20">
+        <header className="bg-white/80 backdrop-blur-sm sticky top-0 z-10 border-b border-orange-100">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
+              Aimatch
+            </h1>
+          </div>
+        </header>
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-400"></div>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-white pb-20">
