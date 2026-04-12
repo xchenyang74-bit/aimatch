@@ -1,78 +1,91 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// 开发模式用户 ID
-const DEV_USER_ID = 'dev-user-1';
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // 开发模式：获取模拟用户的所有对话
-    const user = await prisma.user.findFirst({
-      where: { id: DEV_USER_ID },
-    });
-
-    if (!user) {
-      // 如果没有用户，创建模拟数据
-      return NextResponse.json({
-        code: 0,
-        data: [
-          {
-            id: 'conv-1',
-            user: { id: 'user-1', nickname: '小明', avatar: null },
-            lastMessage: '你好！看到你的资料，感觉我们兴趣很相似 😊',
-            lastMessageTime: new Date(Date.now() - 3600000).toISOString(),
-            unreadCount: 2,
-          },
-          {
-            id: 'conv-2',
-            user: { id: 'user-2', nickname: '小红', avatar: null },
-            lastMessage: '哈哈，我也喜欢摄影！',
-            lastMessageTime: new Date(Date.now() - 86400000).toISOString(),
-            unreadCount: 0,
-          },
-        ],
-      });
-    }
-
-    // 获取用户的聊天消息，按对话分组
-    const messages = await prisma.chatMessage.findMany({
-      where: {
-        OR: [{ senderId: user.id }, { receiverId: user.id }],
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    });
-
-    // 按对话对方分组
-    const conversationsMap = new Map();
+    const userId = request.cookies.get('user_id')?.value;
     
-    for (const msg of messages) {
-      const otherUserId = msg.senderId === user.id ? msg.receiverId : msg.senderId;
-      
-      if (!conversationsMap.has(otherUserId)) {
-        conversationsMap.set(otherUserId, {
-          lastMessage: msg,
-          messages: [msg],
-        });
-      } else {
-        conversationsMap.get(otherUserId).messages.push(msg);
-      }
+    if (!userId) {
+      return NextResponse.json(
+        { code: -1, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    // 转换为前端需要的格式
-    const conversations = Array.from(conversationsMap.entries()).map(([otherUserId, data]) => ({
-      id: `conv-${otherUserId}`,
-      userId: otherUserId,
-      lastMessage: data.lastMessage.content,
-      lastMessageTime: data.lastMessage.createdAt.toISOString(),
-      unreadCount: 0, // 简化处理
-    }));
+    // 获取所有匹配（互相关注）的用户
+    const matches = await prisma.match.findMany({
+      where: {
+        OR: [
+          { userId: userId, status: 'ACCEPTED' },
+          { matchedUserId: userId, status: 'ACCEPTED' },
+        ],
+      },
+      include: {
+        user: {
+          select: { id: true, nickname: true, avatar: true },
+        },
+        matchedUser: {
+          select: { id: true, nickname: true, avatar: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
-    return NextResponse.json({ code: 0, data: conversations });
+    // 获取最后一条消息和未读数
+    const conversations = await Promise.all(
+      matches.map(async (match) => {
+        const otherUser = match.userId === userId ? match.matchedUser : match.user;
+        
+        // 获取最后一条消息
+        const lastMessage = await prisma.chatMessage.findFirst({
+          where: {
+            OR: [
+              { senderId: userId, receiverId: otherUser.id },
+              { senderId: otherUser.id, receiverId: userId },
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        // 获取未读消息数（对方发送的，我还没有读的）
+        const unreadCount = await prisma.chatMessage.count({
+          where: {
+            senderId: otherUser.id,
+            receiverId: userId,
+            // 这里可以添加已读状态字段，目前简化处理
+          },
+        });
+
+        return {
+          matchId: match.id,
+          user: otherUser,
+          lastMessage: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt.toISOString(),
+            isMe: lastMessage.senderId === userId,
+          } : null,
+          unreadCount,
+          matchScore: match.matchScore,
+        };
+      })
+    );
+
+    // 按最后消息时间排序
+    conversations.sort((a, b) => {
+      const timeA = a.lastMessage?.createdAt || '1970-01-01';
+      const timeB = b.lastMessage?.createdAt || '1970-01-01';
+      return new Date(timeB).getTime() - new Date(timeA).getTime();
+    });
+
+    return NextResponse.json({
+      code: 0,
+      data: conversations,
+    });
   } catch (error) {
-    console.error('Get conversations error:', error);
+    console.error('Failed to fetch conversations:', error);
     return NextResponse.json(
-      { code: -1, message: 'Failed to get conversations' },
+      { code: -1, message: 'Failed to fetch conversations' },
       { status: 500 }
     );
   }
