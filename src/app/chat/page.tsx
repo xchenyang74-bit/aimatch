@@ -2,41 +2,63 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import { MessageCircle } from 'lucide-react';
 
 interface Conversation {
-  id: string;
+  matchId: string;
   user: {
     id: string;
-    nickname: string;
+    nickname: string | null;
     avatar: string | null;
   };
-  lastMessage: string;
-  lastMessageTime: string;
+  lastMessage: {
+    id: string;
+    content: string;
+    createdAt: string;
+    isMe: boolean;
+  } | null;
   unreadCount: number;
+  matchScore: number;
 }
 
 export default function ChatListPage() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // 获取对话列表
-    fetch('/api/chat/conversations')
-      .then(res => res.json())
-      .then(data => {
-        if (data.code === 0) {
-          setConversations(data.data);
-        }
-        setLoading(false);
-      })
-      .catch((err: any) => {
-        console.error('Failed to load conversations:', err);
-        setLoading(false);
-      });
+    loadConversations();
   }, []);
 
-  const formatTime = (timeString: string) => {
+  const loadConversations = async () => {
+    try {
+      const res = await fetch('/api/chat/conversations');
+      const data = await res.json();
+      
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
+      if (data.code === 0) {
+        setConversations(data.data);
+      } else {
+        setError(data.message || '加载失败');
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+      setError('网络错误，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return '';
+    
     const date = new Date(timeString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -54,26 +76,34 @@ export default function ChatListPage() {
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
+  // 截断消息预览
+  const truncateMessage = (content: string | null, isMe: boolean | null) => {
+    if (!content) return '暂无消息';
+    const prefix = isMe ? '我: ' : '';
+    const text = prefix + content;
+    return text.length > 30 ? text.slice(0, 30) + '...' : text;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 顶部标题 */}
       <header className="bg-white sticky top-0 z-10 border-b border-gray-100">
         <div className="max-w-lg mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-800">消息</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-800">消息</h1>
+            <span className="text-sm text-gray-500">
+              {conversations.length} 个匹配
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* 搜索框 */}
-      <div className="max-w-lg mx-auto px-4 py-3">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="搜索聊天记录"
-            className="w-full bg-gray-100 rounded-xl py-3 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-          />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+      {/* 错误提示 */}
+      {error && (
+        <div className="mx-4 mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
+          {error}
         </div>
-      </div>
+      )}
 
       {/* 对话列表 */}
       <main className="max-w-lg mx-auto">
@@ -82,42 +112,68 @@ export default function ChatListPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400"></div>
           </div>
         ) : conversations.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-3">💬</div>
+          <div className="text-center py-20 px-4">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center">
+              <MessageCircle className="w-10 h-10 text-orange-400" />
+            </div>
             <h3 className="text-lg font-semibold text-gray-700 mb-1">暂无消息</h3>
-            <p className="text-gray-500 text-sm">去推荐页看看，开始新的对话吧</p>
+            <p className="text-gray-500 text-sm mb-6">去推荐页看看，开始新的对话吧</p>
+            <Link 
+              href="/dashboard"
+              className="inline-block px-6 py-3 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-full font-medium hover:shadow-lg transition-shadow"
+            >
+              查看推荐
+            </Link>
           </div>
         ) : (
-          <div className="bg-white">
+          <div className="bg-white mt-2">
             {conversations.map((conv, index) => (
               <Link
-                key={conv.id}
+                key={conv.matchId}
                 href={`/chat/${conv.user.id}`}
                 className={`flex items-center px-4 py-4 hover:bg-gray-50 transition-colors ${
                   index !== conversations.length - 1 ? 'border-b border-gray-100' : ''
                 }`}
               >
                 {/* 头像 */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center flex-shrink-0 mr-3">
-                  <span className="text-xl">👤</span>
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 flex items-center justify-center flex-shrink-0 mr-3">
+                    {conv.user.avatar ? (
+                      <img 
+                        src={conv.user.avatar} 
+                        alt={conv.user.nickname || ''}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl">👤</span>
+                    )}
+                  </div>
+                  {/* 在线状态指示器 */}
+                  <div className="absolute bottom-0 right-2 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
                 </div>
 
                 {/* 内容 */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="font-medium text-gray-800 truncate">
-                      {conv.user.nickname}
-                    </h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-800 truncate">
+                        {conv.user.nickname || '匿名用户'}
+                      </h3>
+                      {/* 匹配度标签 */}
+                      <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full">
+                        {Math.round(conv.matchScore)}% 契合
+                      </span>
+                    </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {formatTime(conv.lastMessageTime)}
+                      {formatTime(conv.lastMessage?.createdAt || null)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-500 truncate pr-2">
-                      {conv.lastMessage}
+                    <p className={`text-sm truncate pr-2 ${conv.unreadCount > 0 ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+                      {truncateMessage(conv.lastMessage?.content || null, conv.lastMessage?.isMe || null)}
                     </p>
                     {conv.unreadCount > 0 && (
-                      <span className="flex-shrink-0 bg-orange-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      <span className="flex-shrink-0 bg-gradient-to-r from-orange-400 to-pink-400 text-white text-xs rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5">
                         {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                       </span>
                     )}
