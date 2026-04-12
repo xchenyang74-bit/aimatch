@@ -6,7 +6,9 @@ export function middleware(request: NextRequest) {
   
   // 将 /login 重定向到 /api/login-html
   if (pathname === '/login') {
-    return NextResponse.redirect(new URL('/api/login-html', request.url));
+    const url = request.url;
+    const baseUrl = url.replace('/login', '');
+    return NextResponse.redirect(`${baseUrl}/api/login-html`);
   }
   
   // 公开路由（不需要登录）
