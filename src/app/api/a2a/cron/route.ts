@@ -10,6 +10,14 @@
 import { runIncrementalMatching } from '@/lib/a2a-matcher';
 
 export async function GET(req: Request) {
+  return handleCron(req);
+}
+
+export async function POST(req: Request) {
+  return handleCron(req);
+}
+
+async function handleCron(req: Request) {
   try {
     // 验证请求（可选：添加 secret key 验证）
     const { searchParams } = new URL(req.url);
