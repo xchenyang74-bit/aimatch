@@ -1,0 +1,20 @@
+name: Force Deploy to Railway
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway (Force)
+        run: |
+          railway up --detach --clean
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
