@@ -100,6 +100,16 @@
 - 添加消息撤回功能
 - 添加图片/文件发送
 
+### 2026-04-10 - 登录页面最终修复
+- **重要事件**: 解决登录页 hydration 问题
+- **状态**: ✅ 已修复
+  - 使用 API 路由返回纯 HTML，完全绕过 Next.js React 渲染
+  - Middleware 将 /login 重定向到 /api/login-html
+  - 彻底解决 "加载中..." 问题
+
+**根本原因**: Next.js 16 + standalone 模式下，React 客户端 hydration 与服务器渲染不匹配
+**解决方案**: 完全避免 React，使用纯 HTML + Vanilla JS
+
 ---
 
 ## 🎯 项目概述
