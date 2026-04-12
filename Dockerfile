@@ -18,6 +18,9 @@ COPY . .
 # 确保没有残留的 public/login.html
 RUN rm -f public/login.html
 
+# 强制刷新缓存
+RUN echo "Build version: v3-$(date +%s)" > .build-version
+
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # 清理旧的构建缓存并重新构建

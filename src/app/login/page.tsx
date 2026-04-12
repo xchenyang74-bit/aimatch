@@ -5,7 +5,7 @@ export default function LoginPage() {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Aimatch - AI 驱动的社交匹配平台</title>
+        <title>Aimatch - AI 驱动的社交匹配平台 v3</title>
         <style>{`
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
