@@ -1,9 +1,6 @@
-export default function LoginPage() {
-  return (
-    <div
-      dangerouslySetInnerHTML={{
-        __html: `
-<!DOCTYPE html>
+import { NextResponse } from 'next/server';
+
+const loginHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -216,7 +213,6 @@ export default function LoginPage() {
     
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
     
-    // 检查 URL 错误参数
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
     if (error) {
@@ -233,9 +229,12 @@ export default function LoginPage() {
     }
   </script>
 </body>
-</html>
-        `,
-      }}
-    />
-  );
+</html>`;
+
+export async function GET() {
+  return new Response(loginHtml, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
 }
