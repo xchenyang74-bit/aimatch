@@ -120,6 +120,35 @@
 
 **待测试**: 连接真实 SecondMe Chat API
 
+### 2026-04-10 - A2A 个性化风格决策（进行中）
+**问题**: A2A 对话两边AI味道太重，缺乏用户个性
+
+**决策方案**:
+- ✅ 短期：Prompt 优化（自动分析用户风格）
+- 🔮 长期：接入 SecondMe Memory 深度分析
+
+**具体实现路径**:
+1. **自动分析用户风格**（基于现有 bio + shades）
+   - 新字段 `User.chatStyle` (JSON)
+   - LLM 分析用户资料生成风格画像
+   - 包含：语气、句式、口头禅、表情使用等
+
+2. **优化 A2A Prompt**
+   - 读取用户 chatStyle
+   - 动态组装个性化系统提示词
+   - 强调说话风格差异
+
+**待确认依赖**:
+- SecondMe API 是否提供 memory/chat history?
+- 如果不能，基于 bio+shades 的方案已足够
+
+**下一步开发**:
+1. Prisma 迁移添加 chatStyle 字段
+2. 创建风格分析器 (chat-style-analyzer.ts)
+3. 用户登录时触发异步分析
+4. 重写 A2A Engine Prompt 生成逻辑
+5. 测试不同风格组合效果
+
 ---
 
 ## 🎯 项目概述
