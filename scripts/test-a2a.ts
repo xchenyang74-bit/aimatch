@@ -3,6 +3,8 @@
  * 直接测试 A2A 对话逻辑，不依赖数据库
  */
 
+export {};
+
 // 模拟用户数据
 const mockUserA = {
   id: 'user-a-001',
